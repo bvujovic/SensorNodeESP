@@ -8,6 +8,7 @@
   Aktuatori:
     - Buzzer
 */
+//* ~500uA
 
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
