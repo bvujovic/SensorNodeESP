@@ -1,4 +1,5 @@
-//* ...
+//* Device (ESP8266) is always connected to WiFi and as soon as it gets the signal (water detected)
+//* it sends WhatsApp message. If message fail to send, device will try again several times.
 
 #include <Arduino.h>
 #include <WiFiServerBasics.h>
@@ -9,6 +10,7 @@ ESP8266WebServer server(80);
 #include "Blinky.h" // https://github.com/bvujovic/ArduinoLibs/tree/main/Blinky
 Blinky led = Blinky::create();
 
+// To print or not to print - debug messages. Also, DEBUG -> fewer retries for msg send failures.
 #define DEBUG true
 #if DEBUG
 #define writeln(x) Serial.println(x)
@@ -18,8 +20,8 @@ Blinky led = Blinky::create();
 #define serialDebugBegin()
 #endif
 
-// Sending an actual WhatsApp message is faked (testing purposes) or not.
-// #define FAKE_SEND_MSG
+// Sending an actual WhatsApp message or not (testing purposes).
+#define REAL_SEND_MSG
 
 // Milliseconds in 1 second.
 #define SEC (1000)
@@ -39,12 +41,12 @@ uint retryIntervals[] = {0, 5, 20};
 #else
 uint retryIntervals[] = {0, 5, 30, 3 * 60, 15 * 60};
 #endif
-//
+// Index/counter for retries (message send failures). -1 when there is no problem with sending messages.
 int idxRetry = -1;
 
 void wiFiOn()
 {
-#ifndef FAKE_SEND_MSG
+#ifdef REAL_SEND_MSG
   writeln("wiFiOn");
   led.on();
   WiFi.mode(WIFI_STA);
@@ -57,18 +59,14 @@ void wiFiOn()
     delay(1 * MIN);
   }
   led.off();
-  writeln("WiFi ON");
+  writeln("Connected to WiFi");
 #endif
 }
 
 int sendWhatsAppMessage()
 {
   writeln("sendWhatsAppMessage");
-#ifdef FAKE_SEND_MSG
-  return HTTP_CODE_BAD_REQUEST;
-  // led.blinkOk();
-  // return HTTP_CODE_OK;
-#else
+#ifdef REAL_SEND_MSG
   //* https://www.callmebot.com/blog/free-api-whatsapp-messages/
   String url = "http://api.callmebot.com/whatsapp.php?";
   url = url + "phone=" + CMB_PHONE;
@@ -87,6 +85,10 @@ int sendWhatsAppMessage()
     writeln(client.getString());
   client.end();
   return respCode;
+#else // fake send message
+  led.blinkOk();
+  return HTTP_CODE_BAD_REQUEST;
+  // return HTTP_CODE_OK;
 #endif
 }
 
@@ -106,7 +108,7 @@ void loop()
   bool lastSuccSendClear = !isMsgSent || itv > noResendInterval;
   // Should device try to send message again after failed send.
   bool lastFailSendClear = idxRetry > -1 && itv > retryIntervals[idxRetry] * SEC;
-  
+
   if ((!digitalRead(pinWater) && lastSuccSendClear) || lastFailSendClear)
   {
     msLastMsgSent = millis();
@@ -127,6 +129,9 @@ void loop()
   }
 #ifndef FAKE_SEND_MSG
   if (!WiFi.isConnected())
+  {
+    writeln("No WiFi -> reset device and try to connect to WiFi again.");
     ESP.reset();
+  }
 #endif
 }
