@@ -21,14 +21,14 @@ Blinky led = Blinky::create();
 #endif
 
 // Sending an actual WhatsApp message or not (testing purposes).
-#define REAL_SEND_MSG
+#define REAL_SEND_MSG true
 
 // Milliseconds in 1 second.
 #define SEC (1000)
 // Milliseconds in 1 minute.
 #define MIN (60 * SEC)
 
-const byte pinWater = D3;
+const byte pinWater = D5;
 
 bool isMsgSent = false;
 // Moment when the last message was sent (msec).
@@ -46,12 +46,13 @@ int idxRetry = -1;
 
 void wiFiOn()
 {
-#ifdef REAL_SEND_MSG
+#if REAL_SEND_MSG
   writeln("wiFiOn");
   led.on();
   WiFi.mode(WIFI_STA);
   WiFi.persistent(false);
   while (!ConnectToWiFi())
+  // while (!ConnectToWiFi("POCO X3 Pro", "mile1234"))
   {
     writeln("Connecting to WiFi failed. Device will try to connect again...");
     led.blink(5, 500);
@@ -66,7 +67,8 @@ void wiFiOn()
 int sendWhatsAppMessage()
 {
   writeln("sendWhatsAppMessage");
-#ifdef REAL_SEND_MSG
+#if REAL_SEND_MSG
+  led.on();
   //* https://www.callmebot.com/blog/free-api-whatsapp-messages/
   String url = "http://api.callmebot.com/whatsapp.php?";
   url = url + "phone=" + CMB_PHONE;
@@ -84,11 +86,12 @@ int sendWhatsAppMessage()
   if (respCode > 0)
     writeln(client.getString());
   client.end();
+  led.off();
   return respCode;
 #else // fake send message
   led.blinkOk();
-  return HTTP_CODE_BAD_REQUEST;
-  // return HTTP_CODE_OK;
+  // return HTTP_CODE_BAD_REQUEST; // test retries
+  return HTTP_CODE_OK;
 #endif
 }
 
@@ -127,10 +130,11 @@ void loop()
       writeln(idxRetry);
     }
   }
-#ifndef FAKE_SEND_MSG
+#if REAL_SEND_MSG
   if (!WiFi.isConnected())
   {
     writeln("No WiFi -> reset device and try to connect to WiFi again.");
+    delay(MIN);
     ESP.reset();
   }
 #endif
