@@ -2,28 +2,47 @@
 //* This code is executing on ATtiny85 @8MHz w/ STX882 (transmitter).
 //* Based on https://github.com/perja12/nexa_remote_control
 
+//* Power consumption
+//* Deep sleep: 14.6uA - PIR, 0.2uA - water detection wires
+//* 0.16mA water detection: when wires are in the water (after signal is sent)
+//* 13mA sending signals, 5mA waiting between sending signals
+
 #include <Arduino.h>
 #include <avr/power.h>
 #include <avr/sleep.h>
 
-const byte pinTx = 0; // DATA pin on STX882
-//* const byte pinIn = 2; // PIR, wires for water detection, buton... (INPUT_PULLUP)
+#define PIN_TX 0 // DATA pin on STX882
+//* #define PIN_IN 1; // wire for water detection, button (INPUT_PULLUP); PIR (INPUT)
+
+#define CNT_REPEAT_SEND 3    // How many times signal is sent.
+#define ITV_PAUSE 4          // (seconds) Pause between sending signals.
+#define ITV_PULSE 5000       // (microseconds) Duration of 1 data pulse (LOW).
+#define ITV_BREAK_PULSE 1000 // (microseconds) Duration of 1 break pulse (HIGH).
+#define ITV_PULSE_SEND 10    // How many pulses are sent for 1 signal.
 
 #define CMD_NONE 0
-#define CMD_MIDDLE 2
+#define CMD_SIGNAL 1
 
-volatile int cmd = CMD_NONE;
+#define SIGNAL_ON HIGH // This value should be HIGH for PIR, LOW for water detection wires, test button...
 
-// TODO isprobati ovo sa PIRom i zicama za vodu umesto tastera
-// TODO da li moze bez cmd-a? mozda samo bool promenljiva da se vidi da li se desio interrupt
-// TODO u konacnoj verziji bi se n puta poslalo po m signala od x ms - izvuci konstante na vr' koda
+volatile uint8_t cmd = CMD_NONE;
+
+// TODO+ u konacnoj verziji bi se n puta poslalo po m signala od x ms - izvuci konstante na vr' koda
+// TODO+ uslovno prevodjenje za PIR (signalizacija na HIGH) ili za taster/vodu (sign za LOW)
 // TODO dodati sliku test elektronike i README.md fajl sa objasnjenjima
 
 ISR(PCINT0_vect)
 {
     cli();
-    if (!bit_is_set(PINB, PB2))
-        cmd = CMD_MIDDLE;
+
+    // if (bit_is_set(PINB, PB1) == (SIGNAL_ON == HIGH))
+    //     cmd = CMD_SIGNAL;
+#if SIGNAL_ON == HIGH
+    if (bit_is_set(PINB, PB1))
+#else
+    if (!bit_is_set(PINB, PB1))
+#endif
+        cmd = CMD_SIGNAL;
 }
 
 void setup()
@@ -33,50 +52,60 @@ void setup()
     // Turn off ADC to save power.
     ADCSRA &= ~bit(ADEN);
 
-    pinMode(PB2, INPUT_PULLUP);
+    // pinMode(PB1, SIGNAL_ON == HIGH ? INPUT : INPUT_PULLUP);
+#if SIGNAL_ON == HIGH
+    pinMode(PB1, INPUT);
+#else
+    pinMode(PB1, INPUT_PULLUP);
+#endif
+
+    for (int i = 0; i < 5 * 1000; i++)
+        delayMicroseconds(1000);
 
     // Configure pin change interrupt.
-    PCMSK |= _BV(PCINT2);
+    PCMSK |= _BV(PCINT1);
     GIFR |= bit(PCIF);  // clear any outstanding interrupts
     GIMSK |= bit(PCIE); // enable pin change interrupts
 }
 
-// Transmit HIGH/LOW and then delay for itv milliseconds.
-void send(uint8_t val, uint8_t itv)
+// Transmit HIGH/LOW and then delay for itv microseconds.
+void send(uint8_t val, uint16_t itv)
 {
-    digitalWrite(pinTx, val);
-    delayMicroseconds(itv * 1000);
+    digitalWrite(PIN_TX, val);
+    delayMicroseconds(itv);
 }
 
 void loop()
 {
-    pinMode(pinTx, INPUT); // Set pinTx to INPUT in order to save power.
-    sei();                 // Enable interrupts again, go to sleep and wait for intterrupt.
+    pinMode(PIN_TX, INPUT); // Set PIN_TX to INPUT in order to save power.
+    sei();                  // Enable interrupts again, go to sleep and wait for intterrupt.
     go_to_sleep();
 
     cli(); // disable interupts
     if (cmd != CMD_NONE)
     {
         // Wakes up here.
-        pinMode(pinTx, OUTPUT);
+        pinMode(PIN_TX, OUTPUT);
 
-        for (int j = 0; j < 3; j++)
+        uint8_t j = 0;
+        while (true)
         {
-            // BV: 10x send LOW for 5000 microsec
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < ITV_PULSE_SEND; i++)
             {
-                send(HIGH, 1);
-                send(LOW, 5);
+                send(HIGH, ITV_BREAK_PULSE);
+                send(LOW, ITV_PULSE);
             }
-            send(HIGH, 1);
-            send(LOW, 1);
+            // send(HIGH, ITV_BREAK_PULSE);
+            // send(LOW, ITV_BREAK_PULSE);
 
-            for (int i = 0; i < 1000; i++)
-                delay(50);
+            if (++j >= CNT_REPEAT_SEND)
+                break;
+
+            for (int i = 0; i < ITV_PAUSE * 1000; i++)
+                delayMicroseconds(1000);
         }
     }
-    // Avoid getting a new interrupt because of button bounce.
-    delay(50);
+    // delay(50); //Avoid getting a new interrupt because of button bounce.
     sei(); // enable interupts
 
     cmd = CMD_NONE;
