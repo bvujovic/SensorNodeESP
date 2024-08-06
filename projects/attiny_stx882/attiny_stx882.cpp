@@ -12,7 +12,7 @@
 #include <avr/sleep.h>
 
 #define PIN_TX 0 // DATA pin on STX882
-//* #define PIN_IN 1; // wire for water detection, button (INPUT_PULLUP); PIR (INPUT)
+//* #define PIN_IN 1; // PB1 - wire for water detection, button (INPUT_PULLUP); PIR (INPUT)
 
 #define CNT_REPEAT_SEND 3    // How many times signal is sent.
 #define ITV_PAUSE 4          // (seconds) Pause between sending signals.
@@ -23,25 +23,15 @@
 #define CMD_NONE 0
 #define CMD_SIGNAL 1
 
-#define SIGNAL_ON HIGH // This value should be HIGH for PIR, LOW for water detection wires, test button...
+#define SIGNAL_ON LOW // This value should be HIGH for PIR, LOW for water detection wires, test button...
 
 volatile uint8_t cmd = CMD_NONE;
-
-// TODO+ u konacnoj verziji bi se n puta poslalo po m signala od x ms - izvuci konstante na vr' koda
-// TODO+ uslovno prevodjenje za PIR (signalizacija na HIGH) ili za taster/vodu (sign za LOW)
-// TODO dodati sliku test elektronike i README.md fajl sa objasnjenjima
 
 ISR(PCINT0_vect)
 {
     cli();
 
-    // if (bit_is_set(PINB, PB1) == (SIGNAL_ON == HIGH))
-    //     cmd = CMD_SIGNAL;
-#if SIGNAL_ON == HIGH
-    if (bit_is_set(PINB, PB1))
-#else
-    if (!bit_is_set(PINB, PB1))
-#endif
+    if (bit_is_set(PINB, PB1) == (SIGNAL_ON == HIGH))
         cmd = CMD_SIGNAL;
 }
 
@@ -55,12 +45,15 @@ void setup()
     // pinMode(PB1, SIGNAL_ON == HIGH ? INPUT : INPUT_PULLUP);
 #if SIGNAL_ON == HIGH
     pinMode(PB1, INPUT);
+    for (int i = 0; i < 5 * 1000; i++)
+        delayMicroseconds(1000);
+    // TODO zameniti ovo fiksno cekanje od 5sec za cekanje dok se signal ne spusti na LOW, npr...
+    while (bit_is_set(PINB, PB1))
+        for (int i = 0; i < 200; i++)
+            delayMicroseconds(1000);
 #else
     pinMode(PB1, INPUT_PULLUP);
 #endif
-
-    for (int i = 0; i < 5 * 1000; i++)
-        delayMicroseconds(1000);
 
     // Configure pin change interrupt.
     PCMSK |= _BV(PCINT1);
@@ -95,8 +88,6 @@ void loop()
                 send(HIGH, ITV_BREAK_PULSE);
                 send(LOW, ITV_PULSE);
             }
-            // send(HIGH, ITV_BREAK_PULSE);
-            // send(LOW, ITV_BREAK_PULSE);
 
             if (++j >= CNT_REPEAT_SEND)
                 break;
@@ -105,7 +96,6 @@ void loop()
                 delayMicroseconds(1000);
         }
     }
-    // delay(50); //Avoid getting a new interrupt because of button bounce.
     sei(); // enable interupts
 
     cmd = CMD_NONE;
