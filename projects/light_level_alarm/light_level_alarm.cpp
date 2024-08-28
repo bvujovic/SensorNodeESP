@@ -6,7 +6,7 @@
 const byte pinIn = A0; // LDR
 const byte pinOut = 4; // D2, buzzer
 
-const uint64_t shortSleep = 5;       // (seconds) Duration of sleep when LED/light is still on.
+const uint64_t shortSleep = 60;      // (seconds) Duration of sleep when LED/light is still on.
 const uint64_t longSleep = 3;        // (minutes) Duration of sleep after LED/light is switched off.
 const uint64_t usToSec = 1000000;    // Million microseconds = 1 second.
 const uint32_t cntBeeps = 2;         // How many times will buzzer go off when LED/light is switched off.
