@@ -8,6 +8,10 @@
         "vector": "cpp",
         "string_view": "cpp",
         "initializer_list": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "algorithm": "cpp",
+        "*.tcc": "cpp",
+        "type_traits": "cpp",
+        "variant": "cpp"
     }
 }

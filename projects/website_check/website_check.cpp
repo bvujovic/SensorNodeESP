@@ -1,6 +1,6 @@
 //* Device checks https://elektrodistribucija.rs/planirana-iskljucenja-beograd/...
 //* to see if there are planned power outages.
-//TODO Refactor this code, make a class, add sending WhatsApp msg and deploy it in some other project.
+// TODO Refactor this code, make a class, add sending WhatsApp msg and deploy it in some other project.
 
 #include <Arduino.h>
 #include "WiFiServerBasics.h"
@@ -13,17 +13,50 @@ const String webFiles[] = {
 };
 const String WEB_HOST = "elektrodistribucija.rs";
 
-struct Target
+struct Location
 {
     String municipality;
     String street;
+    bool found;
 };
 
-const Target targets[] = {
-    {"Барајево", "ПОП-БОРИНА"},
-    {"Чукарица", "КРАЉИЦЕ КАТАРИНЕ"},
-    {"Чукарица", "МИЛИЈЕ СТАНОЈЛОВИЋА"},
+Location locations[] = {
+    {"Чукарица", "КРАЉИЦЕ КАТАРИНЕ", false},
+    {"Чукарица", "МИЛИЈЕ СТАНОЈЛОВИЋА", false},
+    {"Барајево", "ПОП-БОРИНА", false},
 };
+
+void searchForLocations(String &html)
+{
+    for (auto &l : locations)
+    {
+        l.found = false;
+        int lastIdxEnd = 0;
+        while (lastIdxEnd >= 0)
+        {
+            int idxStart = html.indexOf(l.municipality, lastIdxEnd);
+            if (idxStart == -1)
+            {
+                lastIdxEnd = -1;
+                continue;
+            }
+            int idxEnd = lastIdxEnd = html.indexOf("</TR>", idxStart);
+            if (idxEnd == -1)
+                continue;
+            int idxStreet = html.indexOf(l.street, idxStart);
+            if (idxStreet == -1 || idxStreet > idxEnd)
+                continue;
+            l.found = true;
+        }
+    }
+}
+
+void printFoundLocations()
+{
+    for (auto &l : locations)
+        if (l.found)
+            Serial.println(l.municipality + ": " + l.street);
+}
 
 void setup()
 {
@@ -39,71 +72,47 @@ void setup()
 
     // Serial.println(ESP.getFreeHeap() / 1024); 48
 
-    for (auto webFile : webFiles)
+    WiFiClientSecure *client = new WiFiClientSecure();
+    client->setInsecure();
+    if (!client->connect(WEB_HOST, 443))
     {
-        WiFiClientSecure client;
-        client.setInsecure();
-        if (!client.connect(WEB_HOST, 443))
-        {
-            Serial.println("Connection to host failed!");
-            return;
-        }
+        Serial.println("Connection to host failed!");
+        return;
+    }
 
-        Serial.println("----");
+    for (auto &webFile : webFiles)
+    {
         Serial.println(webFile);
-        if (client.connected())
-        {
-            client.print(String("GET /planirana-iskljucenja-beograd/") + webFile + " HTTP/1.1\r\n" +
-                         "Host: " + WEB_HOST + "\r\n" +
-                         "Connection: close\r\n\r\n");
-            delay(10);
-        }
+        // if (client->connected())
+        // {
+        client->print(String("GET /planirana-iskljucenja-beograd/") + webFile + " HTTP/1.1\r\n" +
+                      "Host: " + WEB_HOST + "\r\n" +
+                      "Connection: Keep-Alive\r\n\r\n");
+        delay(10);
+        // }
         ulong timeout = millis();
-        while (client.available() == 0)
+        while (client->available() == 0)
             if (millis() - timeout > 5000)
             {
                 Serial.println("Client Timeout!");
-                client.stop();
+                client->stop();
                 return;
             }
-        // Serial.println(ESP.getFreeHeap() / 1024); 20
         String line;
-        int cntTargets = sizeof(targets) / sizeof(Target);
-        while (client.available())
+        while (client->available())
         {
-            line = client.readStringUntil('\n');
+            line = client->readStringUntil('\n');
             if (line.indexOf("<HTML>") == -1)
                 continue;
-
-            for (int i = 0; i < cntTargets; i++)
-            {
-                int lastIdxEnd = 0;
-                while (lastIdxEnd >= 0)
-                {
-                    int idxStart = line.indexOf(targets[i].municipality, lastIdxEnd);
-                    if (idxStart == -1)
-                    {
-                        lastIdxEnd = -1;
-                        continue;
-                    }
-                    int idxEnd = lastIdxEnd = line.indexOf("</TR>", idxStart);
-                    if (idxEnd == -1)
-                        continue;
-                    int idxStreet = line.indexOf(targets[i].street, idxStart);
-                    if (idxStreet == -1 || idxStreet > idxEnd)
-                        continue;
-                    Serial.println(targets[i].municipality);
-                    Serial.println(targets[i].street);
-                }
-            }
+            searchForLocations(line);
+            printFoundLocations();
         }
-        Serial.println(ESP.getFreeHeap() / 1024); // 11
-        line.clear();
-        client.stop();
+        // Serial.println(ESP.getFreeHeap() / 1024); // 11, 9, 17
     }
-    Serial.println("Closing connection...");
-    // Serial.println(ESP.getFreeHeap() / 1024); 31
+    client->stop();
+    delete client;
 
+    Serial.println("Going to sleep...");
     ESP.deepSleep(0);
 }
 
