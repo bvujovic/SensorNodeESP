@@ -8,12 +8,24 @@ PocResult PlannedOutagesChecker::check(String &msg)
         msg = "No locations are specified for search.";
         return PocError;
     }
-    const String WEB_HOST = "elektrodistribucija.rs";
+#ifdef ESP32
+    const int minMemoryKB = 50;
+#elif defined(ESP8266)
+    const int minMemoryKB = 28;
+#endif
+
+    if (ESP.getFreeHeap() < minMemoryKB * 1024)
+    {
+        msg = "Memory is too low for creating WiFiClientSecure.";
+        return PocError;
+    }
+    const char* WEB_HOST = "elektrodistribucija.rs";
     const String webFiles[] = {
         "Dan_0_Iskljucenja.htm",
         "Dan_1_Iskljucenja.htm",
         "Dan_2_Iskljucenja.htm",
     };
+    // Serial.println(ESP.getFreeHeap() / 1024);
     WiFiClientSecure *client = new WiFiClientSecure();
     client->setInsecure();
     if (!client->connect(WEB_HOST, 443))
@@ -21,6 +33,7 @@ PocResult PlannedOutagesChecker::check(String &msg)
         msg = "Connection to host failed!";
         return PocError;
     }
+    // Serial.println(ESP.getFreeHeap() / 1024);
     for (auto &webFile : webFiles)
     {
         Serial.println(webFile);
@@ -40,12 +53,27 @@ PocResult PlannedOutagesChecker::check(String &msg)
         while (client->available())
         {
             line = client->readStringUntil('\n');
+            if (line.indexOf("Content-Length") != -1)
+            {
+                // e.g. Content-Length: 1234
+                int idx = line.indexOf(":");
+                if (idx != -1)
+                {
+                    String s = line.substring(idx + 1);
+                    uint contentLength = s.toInt();
+                    if (ESP.getFreeHeap() < contentLength + 1024)
+                    {
+                        msg = "Memory is too low for reading page: " + webFile;
+                        return PocError;
+                    }
+                }
+            }
             if (line.indexOf("<HTML>") == -1)
                 continue;
             searchForLocations(line);
             foundLocationsToString(webFile, msg);
         }
-        Serial.println(ESP.getFreeHeap() / 1024);
+        // Serial.println(ESP.getFreeHeap() / 1024);
     }
     client->stop();
     delete client;
@@ -92,6 +120,25 @@ void PlannedOutagesChecker::foundLocationsToString(const String &webFile, String
 
 void PlannedOutagesChecker::addLocation(const String &municipality, const String &street)
 {
-    Location *l = new Location{municipality, street, false};
-    locations.add(l);
+    locations.add(new Location{municipality, street, false});
+}
+
+bool PlannedOutagesChecker::loadLocations(const String &fileName, bool openCloseFS)
+{
+    LittleFS.begin();
+    File fp = LittleFS.open(fileName, "r");
+    if (!fp)
+        return false;
+    String mun, street;
+    while (fp)
+    {
+        mun = fp.readStringUntil('|');
+        if (mun.length() == 0)
+            break;
+        street = fp.readStringUntil('\n');
+        addLocation(mun, street);
+    }
+    fp.close();
+    LittleFS.end();
+    return true;
 }

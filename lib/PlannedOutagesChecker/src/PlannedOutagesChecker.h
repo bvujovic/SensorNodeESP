@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <LinkedList.h> // lib_deps = ivanseidel/LinkedList@0.0.0-alpha+sha.dac3874d28
+#include <LittleFS.h>
 
 struct Location
 {
@@ -30,6 +31,10 @@ private:
 
 public:
     void addLocation(const String &municipality, const String &street);
+    /// @brief Opens and reads .csv file w/ locations in format: <municipality>|<street>
+    /// @param openCloseFS true - method will call begin() and end() on LittleFS
+    /// @return true - success, false - couldn't open file
+    bool loadLocations(const String &fileName, bool openCloseFS);
     //todo clearLocations()
 
     /// @brief Check if specified locations are listed in one of web pages for planned power outages.

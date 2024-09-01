@@ -1,6 +1,6 @@
 //* Device checks https://elektrodistribucija.rs/planirana-iskljucenja-beograd/...
 //* to see if there are planned power outages.
-// TODO Refactor this code, make a class, add sending WhatsApp msg and deploy it in some other project.
+//* This sketch doesn't use PlannedOutagesChecker class, but main_website_check.cpp does.
 
 #include <Arduino.h>
 #include "WiFiServerBasics.h"
