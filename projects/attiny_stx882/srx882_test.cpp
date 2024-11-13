@@ -2,15 +2,16 @@
 //* These values can be analyzed in Excel...
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
+// #include <ESP8266WiFi.h>
+#include <WiFi.h>
 
-const byte pinIn = D7; // DATA on SRX882
+const byte pinIn = 23; // DATA on SRX882
 
 void wiFiOff()
 {
     WiFi.disconnect();
     WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
+    // WiFi.forceSleepBegin();
 }
 
 void setup()

@@ -1,0 +1,2 @@
+1 HC-12 modul mi je izgleda crkao tokom testiranja, ali ne znam zašto.
+Rade pouzdano sa Arduinom, ali ne i sa ESP32. Probati sa SoftwareSerial bibliotekom (na ESP8266 i ESP32) jer sa Serial2 nije bilo baš dobro.
