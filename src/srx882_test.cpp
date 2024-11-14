@@ -1,11 +1,12 @@
-//* Test code for the server side. ESP8266 writes duration of pulses from SRX882.
+//* Test code for the server side. ESP writes duration of pulses from SRX882.
 //* These values can be analyzed in Excel...
 
 #include <Arduino.h>
 // #include <ESP8266WiFi.h>
 #include <WiFi.h>
 
-const byte pinIn = 23; // DATA on SRX882
+// const byte pinIn = 23; // DATA on SRX882
+const byte pinIn = 35; // DATA on SRX882
 
 void wiFiOff()
 {
