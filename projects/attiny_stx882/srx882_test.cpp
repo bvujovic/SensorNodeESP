@@ -25,6 +25,6 @@ void setup()
 void loop()
 {
     ulong pulse = pulseIn(pinIn, LOW);
-    if (pulse >= 3500 && pulse < 5500)
+    if (pulse >= 4500 && pulse < 5500)
         Serial.println(pulse);
 }
