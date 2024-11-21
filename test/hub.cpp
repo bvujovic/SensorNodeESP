@@ -9,8 +9,12 @@
 #include <ESP8266WiFi.h>
 #endif
 
+#include <SrxParser.h>
+SrxParser srx;
+
 const byte pinRadioIn = 19;
 const byte pinLed = 22; // LED_BUILTIN
+const byte pinBuzz = 23;
 bool isDataReceived = false;
 
 char msg[10];
@@ -30,9 +34,10 @@ void setup()
     pinMode(pinRadioIn, INPUT);
     pinMode(pinLed, OUTPUT);
     digitalWrite(pinLed, true);
+    pinMode(pinBuzz, OUTPUT);
+    digitalWrite(pinBuzz, false);
     Serial.begin(115200);
     Serial.println("\n *** SensorNodeESP: HUB ***");
-    // Serial.println("Receiving data...");
     WiFi.mode(WIFI_STA);
     if (esp_now_init() != 0)
     {
@@ -48,40 +53,18 @@ void setup()
 #endif
 }
 
-int cntKitchenSinkWater = 0; // counter for KitchenSinkWater pulses (5ms)
-ulong msLastSignal = 0;      // time (msec) of the last received pulse
-void pulseCount(ulong pulse, ulong ms)
-{
-    if (pulse > 4850 && pulse < 5000)
-    {
-        cntKitchenSinkWater++;
-        msLastSignal = ms;
-    }
-}
-
-static bool pulseCountOk(int cnt)
-{
-    return cnt >= 9 && cnt <= 11;
-}
-
 void loop()
 {
+    
     if (isDataReceived)
     {
-        // digitalWrite(pinLed, false);
-        // delay(500);
-        // digitalWrite(pinLed, true);
         isDataReceived = false;
     }
-    
-    ulong pulse = pulseIn(pinRadioIn, LOW);
-    ulong ms = millis();
-    pulseCount(pulse, ms);    
-    if (msLastSignal > 0 && ms > msLastSignal + 5)
+
+    // Parsing signals from simple sensors (PIR, water detection...) with SRX882
+    SrxCommand cmd = srx.refresh(pulseIn(pinRadioIn, LOW), millis());
+    if (cmd != None)
     {
-        if (pulseCountOk(cntKitchenSinkWater))
-            Serial.println("*");
-        cntKitchenSinkWater = 0;
-        msLastSignal = 0;
+        Serial.printf("SRX882: %d\n", cmd);
     }
 }

@@ -67,13 +67,28 @@ void setup()
 char msg[10];
 int cnt = 0;
 
+// typedef struct struct_message
+// {
+//     char a[32];
+//     int b;
+//     float c;
+//     bool d;
+// } struct_message;
+// struct_message myData;
+
 void loop()
-{  
+{
+    // strcpy(myData.a, "THIS IS A CHAR");
+    // myData.b = random(1, 20);
+    // myData.c = 1.2;
+    // myData.d = false;
+    // esp_err_t result = esp_now_send(mac, (uint8_t *)&myData, sizeof(myData));
+
     itoa(cnt++, msg, 10);
     esp_now_send(mac, (uint8_t *)&msg, strlen(msg));
     delay(4000);
-    
+
     ledOn(!sendSuccess);
     delay(1000);
-    ledOn(false);  
+    ledOn(false);
 }
