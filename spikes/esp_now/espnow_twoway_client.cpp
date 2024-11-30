@@ -1,5 +1,5 @@
-//* https://randomnerdtutorials.com/esp-now-esp32-arduino-ide/
-//* https://randomnerdtutorials.com/esp-now-esp8266-nodemcu-arduino-ide/
+//* ESP32 (w/ battery connector, micro USB) MAC Address: 30:C6:F7:04:66:04
+//* ESP32 WROOM-32 test device (yellow pins) MAC Address: 30:AE:A4:47:9C:C4
 
 #include <Arduino.h>
 #ifdef ESP32
@@ -10,13 +10,6 @@
 #include <ESP8266WiFi.h>
 #endif
 
-const byte pinLed = 2; // LED_BUILTIN
-void ledOn(bool on) { digitalWrite(pinLed, !on); }
-
-// CC:50:E3:0F:62:84
-// uint8_t mac[] = {0xCC, 0x50, 0xE3, 0x0F, 0x62, 0x84};
-// uint8_t mac[] = {0x84, 0xF3, 0xEB, 0x77, 0x04, 0xBA};
-// 30:C6:F7:04:66:04
 uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
 bool sendSuccess = true;
 
@@ -35,11 +28,28 @@ void OnDataSent(uint8_t *mac, uint8_t sendStatus)
 }
 #endif
 
+void printMAC(const uint8_t *mac)
+{
+    Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X \n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
+ulong msLastRecv = 0;
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+    printMAC(mac);
+    char s[10];
+    memcpy(s, incomingData, len);
+    s[len] = 0;
+    // Serial.println(s);
+    ulong msThisRecv = atol(s);
+    Serial.println(msThisRecv - msLastRecv);
+    msLastRecv = msThisRecv;
+}
+
 void setup()
 {
-    pinMode(pinLed, OUTPUT);
-    // digitalWrite(pinLed, true);
-    ledOn(false);
+    // pinMode(pinLed, OUTPUT);
+    // ledOn(false);
     Serial.begin(115200);
     Serial.println();
     WiFi.mode(WIFI_STA);
@@ -51,6 +61,8 @@ void setup()
             delay(100);
     }
 
+    auto res = esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+    Serial.printf("Register receiver: %X\n", res);
 #ifdef ESP32
     esp_now_register_send_cb(OnDataSent);
     memcpy(peerInfo.peer_addr, mac, 6);
@@ -59,8 +71,6 @@ void setup()
     if (esp_now_add_peer(&peerInfo) != ESP_OK)
     {
         Serial.println("Failed to add peer");
-        // digitalWrite(pinLed, false);
-        ledOn(true);
         while (true)
             delay(100);
     }
@@ -71,18 +81,8 @@ void setup()
 #endif
 }
 
-// B char msg[] = "Pozdrav ESP-Now";
-char msg[10];
-int cnt = 0;
-
-// typedef struct struct_message
-// {
-//     char a[32];
-//     int b;
-//     float c;
-//     bool d;
-// } struct_message;
-// struct_message myData;
+char msg[] = "Pozdravs!";
+ulong msLastSend = 0;
 
 void loop()
 {
@@ -93,11 +93,11 @@ void loop()
     // esp_err_t result = esp_now_send(mac, (uint8_t *)&myData, sizeof(myData));
 
     // itoa(cnt++, msg, 10);
-    ultoa(millis(), msg, 10);
-    esp_now_send(mac, (uint8_t *)&msg, strlen(msg));
-    delay(4000);
-
-    ledOn(!sendSuccess);
-    delay(1000);
-    ledOn(false);
+    // ultoa(millis(), msg, 10);
+    if (millis() > msLastSend + 5000)
+    {
+        esp_now_send(mac, (uint8_t *)&msg, strlen(msg));
+        msLastSend = millis();
+    }
+    // delay(10);
 }

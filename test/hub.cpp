@@ -1,4 +1,5 @@
 //* ESP32 (w/ battery connector, micro USB) MAC Address: 30:C6:F7:04:66:04
+//* Procitati https://randomnerdtutorials.com/esp32-esp-now-wi-fi-web-server/
 
 #include <Arduino.h>
 #ifdef ESP32
@@ -19,11 +20,21 @@ bool isDataReceived = false;
 
 char msg[10];
 
+void printMAC(uint8_t *mac)
+{
+    // for (size_t i = 0; i < 6; i++)
+    // Serial.printf("%X:%X \n", mac[0], mac[1]);
+    Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X \n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
 void OnDataRecv(uint8_t *mac, uint8_t *incomingData, uint8_t len)
 {
+    // TODO ako parametar mac oznacava adresu sendera, napraviti listu klijenata u kojoj je kljuc mac
+    // NodeMCU's MAC address: 84:F3:EB:77:04:BA
     // Serial.println("Data received!");
     // Serial.println(len);
     // Serial.println((char *)incomingData);
+    printMAC(mac);
     isDataReceived = true;
     memcpy(msg, incomingData, len);
     Serial.println(atoi(msg));
@@ -55,7 +66,6 @@ void setup()
 
 void loop()
 {
-    
     if (isDataReceived)
     {
         isDataReceived = false;
