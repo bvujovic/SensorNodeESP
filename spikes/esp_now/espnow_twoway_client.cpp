@@ -36,14 +36,21 @@ void printMAC(const uint8_t *mac)
 ulong msLastRecv = 0;
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-    printMAC(mac);
-    char s[10];
-    memcpy(s, incomingData, len);
-    s[len] = 0;
+    // printMAC(mac);
+    Serial.printf("Recv data length: %d\n", len);
+    if (len == 4)
+    {
+        ulong msHub;
+        memcpy(&msHub, incomingData, len);
+        Serial.println(msHub);
+    }
+    // char s[10];
+    // memcpy(s, incomingData, len);
+    // s[len] = 0;
     // Serial.println(s);
-    ulong msThisRecv = atol(s);
-    Serial.println(msThisRecv - msLastRecv);
-    msLastRecv = msThisRecv;
+    // ulong msThisRecv = atol(s);
+    // Serial.println(msThisRecv - msLastRecv);
+    // msLastRecv = msThisRecv;
 }
 
 void setup()
@@ -62,7 +69,7 @@ void setup()
     }
 
     auto res = esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
-    Serial.printf("Register receiver: %X\n", res);
+    Serial.printf("Register receiver code: %X\n", res);
 #ifdef ESP32
     esp_now_register_send_cb(OnDataSent);
     memcpy(peerInfo.peer_addr, mac, 6);
@@ -81,7 +88,7 @@ void setup()
 #endif
 }
 
-char msg[] = "Pozdravs!";
+char msg[] = "millis";
 ulong msLastSend = 0;
 
 void loop()
@@ -94,10 +101,12 @@ void loop()
 
     // itoa(cnt++, msg, 10);
     // ultoa(millis(), msg, 10);
-    if (millis() > msLastSend + 5000)
+    if (millis() > msLastSend + 3000)
     {
-        esp_now_send(mac, (uint8_t *)&msg, strlen(msg));
+        Serial.println(msLastSend);
+        Serial.println(millis());
         msLastSend = millis();
+        esp_now_send(mac, (uint8_t *)&msg, strlen(msg));
     }
     // delay(10);
 }

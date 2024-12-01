@@ -16,6 +16,7 @@
 //     float hum;
 //     float pres;
 // } struct_message;
+// memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
 
 // // Create a struct_message called BME280Readings to hold sensor readings
 // struct_message BME280Readings;
@@ -29,15 +30,10 @@ void printMAC(const uint8_t *mac)
     Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X \n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
-// Callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
     Serial.print("\r\nLast Packet Send Status:\t");
     Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
-    // if (status == 0)
-    //     success = "Delivery Success :)";
-    // else
-    //     success = "Delivery Fail :(";
 }
 
 esp_err_t addPeer()
@@ -47,19 +43,14 @@ esp_err_t addPeer()
     peerInfo.encrypt = false;
     auto res = esp_now_add_peer(&peerInfo);
     if (res != ESP_OK)
-    {
         Serial.printf("Failed to add peer: %X\n", res);
-        // Serial.println("Failed to add peer");
-    }
     return res;
 }
 
-// Callback when data is received
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-    // memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
     printMAC(mac);
-    memcpy(macClient, mac, 6);
+    // memcpy(macClient, mac, 6);
 
     char req[80];
     memcpy(req, incomingData, len);
@@ -69,14 +60,13 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     Serial.print("Bytes received: ");
     Serial.println(len);
     isDataReceived = true;
-
-    // addPeer();
 }
 
 void setup()
 {
     Serial.begin(115200);
     Serial.println("\nServer started!");
+
     WiFi.mode(WIFI_STA);
     if (esp_now_init() != ESP_OK)
     {
@@ -86,10 +76,12 @@ void setup()
     }
     esp_now_register_send_cb(OnDataSent);
 
-    uint8_t testMac[] = {0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4};
-    memcpy(peerInfo.peer_addr, testMac, 6);
-    peerInfo.channel = 0;
-    peerInfo.encrypt = false;
+    // uint8_t testMac[] = {0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4};
+    // memcpy(peerInfo.peer_addr, testMac, 6);
+    memcpy(peerInfo.peer_addr, (uint8_t[]){0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4}, 6);
+    peerInfo.encrypt = peerInfo.channel = 0;
+    // peerInfo.channel = 0;
+    // peerInfo.encrypt = false;
     auto res = esp_now_add_peer(&peerInfo);
     if (res != ESP_OK)
     {
@@ -99,8 +91,6 @@ void setup()
     }
     else
         Serial.println("Client peer added.");
-
-    // Register for a callback function that will be called when data is received
     esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
 }
 
@@ -118,13 +108,5 @@ void loop()
         ultoa(ms, msg, 10);
         esp_now_send(macClient, (uint8_t *)&msg, strlen(msg));
     }
-
-    // esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&BME280Readings, sizeof(BME280Readings));
-
-    // if (result == ESP_OK)
-    //     Serial.println("Sent with success");
-    // else
-    //     Serial.println("Error sending the data");
-
     delay(10);
 }
