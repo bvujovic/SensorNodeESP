@@ -52,13 +52,16 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     printMAC(mac);
     // memcpy(macClient, mac, 6);
 
-    char req[80];
-    memcpy(req, incomingData, len);
-    req[len] = 0;
-    Serial.println(req);
+    // char req[80];
+    // memcpy(req, incomingData, len);
+    // req[len] = 0;
+    // Serial.println(req);
 
     Serial.print("Bytes received: ");
     Serial.println(len);
+    ulong ms;
+    memcpy(&ms, incomingData, 4);
+    Serial.printf("Server's millis: %l\n", ms);
     isDataReceived = true;
 }
 
@@ -76,9 +79,9 @@ void setup()
     }
     esp_now_register_send_cb(OnDataSent);
 
-    // uint8_t testMac[] = {0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4};
-    // memcpy(peerInfo.peer_addr, testMac, 6);
-    memcpy(peerInfo.peer_addr, (uint8_t[]){0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4}, 6);
+    uint8_t testMac[] = {0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4};
+    memcpy(peerInfo.peer_addr, testMac, 6);
+    // memcpy(peerInfo.peer_addr, (uint8_t[]){0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4}, 6);
     peerInfo.encrypt = peerInfo.channel = 0;
     // peerInfo.channel = 0;
     // peerInfo.encrypt = false;
@@ -92,9 +95,11 @@ void setup()
     else
         Serial.println("Client peer added.");
     esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+    Serial.printf("setup ms: %ul\n", millis());
 }
 
-char msg[10];
+char msg[] = "millis";
+bool isSent = false;
 
 void loop()
 {
@@ -109,4 +114,13 @@ void loop()
         esp_now_send(macClient, (uint8_t *)&msg, strlen(msg));
     }
     delay(10);
+
+    // ulong ms = millis();
+    // if (ms > 3000 && !isSent)
+    // {
+    //     Serial.println("millis cmd sent");
+    //     auto res = esp_now_send(macClient, (uint8_t *)msg, strlen(msg));
+    //     Serial.printf("Sent code: %X\n", res);
+    //     isSent = true;
+    // }
 }

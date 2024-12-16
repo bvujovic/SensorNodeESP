@@ -94,7 +94,8 @@ void loop()
 
     // itoa(cnt++, msg, 10);
     ultoa(millis(), msg, 10);
-    esp_now_send(mac, (uint8_t *)&msg, strlen(msg));
+    auto res = esp_now_send(mac, (uint8_t *)&msg, strlen(msg));
+    Serial.printf("Send response: 0x%X\n", res);
     delay(4000);
 
     ledOn(!sendSuccess);

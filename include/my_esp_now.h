@@ -45,7 +45,8 @@ void setPeers()
     // My NodeMCU's MAC address: 84:F3:EB:77:04:BA
     memcpy(peers[1].peer_addr, (const uint8_t[]){0x84, 0xF3, 0xEB, 0x77, 0x04, 0xBA}, 6);
     strcpy((char *)peers[1].lmk, "NodeMCU");
-    peers[1].encrypt = peers[1].channel = 0;
+    peers[1].encrypt = false;
+    peers[1].channel = 1;
 }
 
 // // Structure example to send data
@@ -101,6 +102,8 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
+    Serial.println("OnDataRecv");
+    // Serial.printf("%H:%M:%S \n", &ti);
     auto p = findPeer(mac);
     if (p != NULL)
     {

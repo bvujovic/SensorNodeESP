@@ -5,8 +5,7 @@ Logger logger;
 #include <WiFi.h>
 #include <CredWiFi.h>
 #include <AsyncTCP.h>
-// lib_deps = esphome/ESPAsyncWebServer-esphome @ ^3.3.0
-#include <ESPAsyncWebServer.h>
+#include <ESPAsyncWebServer.h> // lib_deps = esphome/ESPAsyncWebServer-esphome @ ^3.3.0
 AsyncWebServer server(80);
 
 #include <SrxParser.h>
@@ -17,6 +16,9 @@ const byte pinLed = 22;
 
 #include "my_esp_now.h"
 struct tm ti;
+
+//* My NodeMCU's MAC address: 84:F3:EB:77:04:BA
+uint8_t mac[] = {0x84, 0xF3, 0xEB, 0x77, 0x04, 0xBA};
 
 void setup()
 {
@@ -30,6 +32,7 @@ void setup()
 
     // WiFi
     WiFi.mode(WIFI_AP_STA);
+    // WiFi.mode(WIFI_STA);
     //? WiFi.persistent(false);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
     Serial.print("Connecting to WiFi");
@@ -42,18 +45,20 @@ void setup()
     Serial.print("ESP32 Web Server's IP address: ");
     Serial.println(WiFi.localIP());
     configTime(3600, 3600, "rs.pool.ntp.org");
-    logger.setTimeInfo(ti);
-    Serial.printf("Total space: %u KB\n", logger.getTotalKB());
-    Serial.printf("Used space: %u KB\n", logger.getUsedKB());
-    auto msgLogged = logger.add("test", "test poruka");
-    Serial.println(msgLogged ? "Test msg added to log file." : "Failed to log test msg.");
-    Serial.println("Folders:");
-    Serial.println(logger.listFolders());
-    Serial.println("Files in /2024_12:");
-    Serial.println(logger.listFiles("/2024_12"));
-    Serial.println("File content for /2024_12/05_Thu.log:");
-    Serial.println(logger.read("/2024_12/05_Thu.log"));
-    WiFi.disconnect(true);
+    // WiFi.disconnect();
+
+    //? logger.setTimeInfo(ti);
+    // Serial.printf("Total space: %u KB\n", logger.getTotalKB());
+    // Serial.printf("Used space: %u KB\n", logger.getUsedKB());
+    // auto msgLogged = logger.add("test", "test poruka");
+    // Serial.println(msgLogged ? "Test msg added to log file." : "Failed to log test msg.");
+    // Serial.println("Folders:");
+    // Serial.println(logger.listFolders());
+    // Serial.println("Files in /2024_12:");
+    // Serial.println(logger.listFiles("/2024_12"));
+    // Serial.println("File content for /2024_12/05_Thu.log:");
+    // Serial.println(logger.read("/2024_12/05_Thu.log"));
+    // WiFi.disconnect(true);
 
     // IPAddress ipa(192, 168, 0, 80);
     // IPAddress gateway(192, 168, 0, 254);
@@ -61,7 +66,7 @@ void setup()
     // WiFi.config(ipa, gateway, subnet);
     // Serial.println(WiFi.localIP());
 
-    // Web Server
+    // // Web Server
     // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
     //           {
     //    Serial.println("ESP32 Web Server: New request received:");  // for debugging
@@ -70,12 +75,12 @@ void setup()
 
     // ESP-NOW
     // setPeers();
-    // if (esp_now_init() != ESP_OK)
-    // {
-    //     Serial.println("Error initializing ESP-NOW");
-    //     while (true)
-    //         delay(100);
-    // }
+    if (esp_now_init() != ESP_OK)
+    {
+        Serial.println("Error initializing ESP-NOW");
+        while (true)
+            delay(100);
+    }
     // esp_now_register_send_cb(OnDataSent);
     // Serial.println("Adding ESP-NOW peers: ");
     // for (auto &&p : peers)
@@ -89,7 +94,15 @@ void setup()
     //     else
     //         Serial.printf("\t%s\n", p.lmk);
     // }
-    // esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+    // memcpy(peerInfo.peer_addr, mac, 6);
+    // peerInfo.channel = 1;
+    // peerInfo.encrypt = false;
+    // if (esp_now_add_peer(&peerInfo) != ESP_OK)
+    // {
+    //     Serial.println("Failed to add peer");
+    //     return;
+    // }
+    esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
 }
 
 char msg[10];
@@ -107,19 +120,20 @@ void loop()
     if (cmd != None)
     {
         Serial.printf("SRX882: %d\n", cmd);
-        logger.add("kujna/sudopera", "Visok nivo vode u sudoperi!");
+        if (cmd == KitchenSinkWater)
+            logger.add("kujna/sudopera", "Visok nivo vode u sudoperi!");
     }
-    // // ESP-NOW
-    // if (peerRespMillis != NULL)
-    // {
-    //     Serial.print("Send to: ");
-    //     Serial.println((char *)peerRespMillis->lmk);
-    //     ulong ms = millis();
-    //     ultoa(ms, msg, 10);
-    //     // esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&msg, strlen(msg));
-    //     esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
-    //     peerRespMillis = NULL;
-    // }
+    // ESP-NOW
+    if (peerRespMillis != NULL)
+    {
+        Serial.print("Send to: ");
+        Serial.println((char *)peerRespMillis->lmk);
+        ulong ms = millis();
+        // ultoa(ms, msg, 10);
+        // esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&msg, strlen(msg));
+        esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
+        peerRespMillis = NULL;
+    }
 
     // if (millis() > msServerStarted + 30000)
     // {
