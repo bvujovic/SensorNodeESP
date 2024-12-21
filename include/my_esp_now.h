@@ -6,27 +6,15 @@
 #include <Arduino.h>
 #include <esp_now.h>
 
-// uint8_t macEsp32Dev[] = {0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4};
-// bool isDataReceived;
-esp_now_peer_info_t peerInfo;
+// B esp_now_peer_info_t peerInfo;
 
-// struct esp_now_peer11
-// {
-//     const char *name;
-//     uint8_t testMac[6];
-// };
-
-// esp_now_peer_info peers[] =
-// {
-//     { .peer_addr = {0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4}, .channel = 0, .encrypt = false },
-// };
-// uint8_t macEsp32Dev[] = {0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4};
-
-esp_now_peer_info peers[2];
-int cntPeers;
-int lenMillisCommand;
+esp_now_peer_info peers[2];               // ESP-NOW peers
+int cntPeers;                             // peers count
+int lenMillisCommand;                     // length of (string) "millis" command
 esp_now_peer_info *peerRespMillis = NULL; // send millis to this peer
 char cmdRequest[80];
+
+void addPeers();
 
 void setPeers()
 {
@@ -35,32 +23,36 @@ void setPeers()
 
     // uint8_t macEsp32Dev[] = {0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4};
     memcpy(peers[0].peer_addr, (const uint8_t[]){0x30, 0xAE, 0xA4, 0x47, 0x9C, 0xC4}, 6);
-    // char nameEsp32Dev[] = {'E', 'S', 'P', 0};
-    // char nameEsp32Dev[] = "ESP32 dev";
-    // Serial.println(strlen(nameEsp32Dev));
-    // memcpy(peers[0].lmk, nameEsp32Dev, 2);
     strcpy((char *)peers[0].lmk, "ESP32 dev");
     peers[0].encrypt = peers[0].channel = 0;
 
-    // My NodeMCU's MAC address: 84:F3:EB:77:04:BA
+    //* My NodeMCU's MAC address: 84:F3:EB:77:04:BA    It works with these settings:
+    //* https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
+    //* WiFi.softAPmacAddress is created from WiFi.macAddress by adding 1 to the last byte
+    // uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
+    // esp_now_add_peer(mac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     memcpy(peers[1].peer_addr, (const uint8_t[]){0x84, 0xF3, 0xEB, 0x77, 0x04, 0xBA}, 6);
     strcpy((char *)peers[1].lmk, "NodeMCU");
-    peers[1].encrypt = false;
-    peers[1].channel = 1;
+    peers[1].encrypt = peers[1].channel = 0;
+
+    addPeers();
 }
 
-// // Structure example to send data
-// // Must match the receiver structure
-// typedef struct struct_message
-// {
-//     float temp;
-//     float hum;
-//     float pres;
-// } struct_message;
-// memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
-
-// // Create a struct_message called BME280Readings to hold sensor readings
-// struct_message BME280Readings;
+void addPeers()
+{
+    Serial.println("Adding ESP-NOW peers: ");
+    for (auto &&p : peers)
+    {
+        auto res = esp_now_add_peer(&p);
+        if (res != ESP_OK)
+        {
+            Serial.println("- Failed to add peer");
+            Serial.printf("- Reason: %X\n", res);
+        }
+        else
+            Serial.printf("\t%s\n", p.lmk);
+    }
+}
 
 bool equalMACs(const uint8_t *mac1, const uint8_t *mac2)
 {
@@ -89,50 +81,15 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
     Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
-// esp_err_t addPeer()
-// {
-//     memcpy(peerInfo.peer_addr, macEsp32Dev, 6);
-//     peerInfo.channel = 0;
-//     peerInfo.encrypt = false;
-//     auto res = esp_now_add_peer(&peerInfo);
-//     if (res != ESP_OK)
-//         Serial.printf("Failed to add peer: %X\n", res);
-//     return res;
-// }
-
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-    Serial.println("OnDataRecv");
-    // Serial.printf("%H:%M:%S \n", &ti);
     auto p = findPeer(mac);
     if (p != NULL)
     {
         Serial.printf("Data received from: %s\n", p->lmk);
-        if (len == lenMillisCommand)
-        {
-            // memcpy(cmdRequest, incomingData, len);
-            // cmdRequest[len] = 0;
-            // Serial.println(strcmp(cmdRequest, "millis")); // 0
-            // Serial.println(strncmp((const char *)incomingData, "millis", lenMillisCommand)); // 0
-            if (strncmp((const char *)incomingData, "millis", lenMillisCommand) == 0)
-                peerRespMillis = p;
-        }
+        if (len == lenMillisCommand && strncmp((const char *)incomingData, "millis", lenMillisCommand) == 0)
+            peerRespMillis = p;
     }
     else
         Serial.println("ESP-NOW peer unknown.");
-
-    // if (equalMACs(mac, peers[0].peer_addr))
-    //     Serial.println((char *)peers[0].lmk);
-    // else
-    //     printMAC(mac);
-
-    // memcpy(macClient, mac, 6);
-
-    // char req[80];
-    // memcpy(req, incomingData, len);
-    // req[len] = 0;
-    // Serial.println(req);
-
-    // Serial.print("Bytes received: ");
-    // Serial.println(len);
 }
