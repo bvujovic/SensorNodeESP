@@ -13,7 +13,6 @@ ATtiny sleeps, wakes up on HIGH (PIR...), sends signal via STX882, goes back to 
 ## TODO
 
 - [x] ATtiny sleep, wake up on button, PIR...
-- [x] ATtiny sends signal via STX882, ESP8266 receives that signal
+- [x] ATtiny sends signal via STX882, hub receives that signal
+- [x] ESP8266 sending message via ESP Now or HTTP web request to another ESP (8266/32).
 - [ ] Hub - central component: ESP (8266/32) receives and logs messages (source/sensor, type:info/warning/error/alarm..., message/data ...) and then sends WA message or e-mail.
-    - [ ] Connect ESP from ESP_IR_TV project with another ESP8266 w/ SRX882 (server/receiver for radio signals). I2C?
-- [ ] ESP8266 sending message via ESP Now or HTTP web request to another ESP (8266/32).

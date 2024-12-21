@@ -1,5 +1,6 @@
 #pragma once
 
+//TODO Pogledati https://stackoverflow.com/questions/11714325/how-to-get-enum-item-name-from-its-value
 /// @brief
 enum SrxCommand
 {

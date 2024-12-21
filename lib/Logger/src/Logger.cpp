@@ -5,10 +5,6 @@ bool Logger::add(const char *source, const char *message)
 {
     if (!getLocalTime(&ti))
         return false;
-
-    // strftime(folderName, sizeof(folderName), "/%Y_%m", &ti);
-    // if (!LittleFS.exists(folderName))
-    //     LittleFS.mkdir(folderName);
     // folder name: createIN
     strftime(strBuffer, sizeof(strBuffer), "/%Y_%m", &ti);
     if (!LittleFS.exists(strBuffer))
@@ -21,10 +17,6 @@ bool Logger::add(const char *source, const char *message)
     {
         strftime(strBuffer, sizeof(strBuffer), "%H:%M:%S", &ti);
         fp.printf("%s\t%s\t%s\n", strBuffer, source, message);
-        // fp.printf(filePath);
-        // fp.printf(source);
-        // fp.print('\t');
-        // fp.println(message);
         fp.close();
         return true;
     }
@@ -52,8 +44,6 @@ String Logger::listFolders()
     {
         File f;
         while (f = root.openNextFile())
-            // B if (listFolders || strHour[0] == '\0' || strstr(f.name(), strHour))
-            // (str += f.name()) += "\n";
             if (f.isDirectory())
                 str += String(f.name()) + "\n";
         return str;

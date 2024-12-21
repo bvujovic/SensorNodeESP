@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include <esp_now.h>
+#include "AirData.h"
 
 // B esp_now_peer_info_t peerInfo;
 
@@ -12,7 +13,7 @@ esp_now_peer_info peers[2];               // ESP-NOW peers
 int cntPeers;                             // peers count
 int lenMillisCommand;                     // length of (string) "millis" command
 esp_now_peer_info *peerRespMillis = NULL; // send millis to this peer
-char cmdRequest[80];
+char line[80];                            // general purpose string - formating data
 
 void addPeers();
 
@@ -89,6 +90,16 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         Serial.printf("Data received from: %s\n", p->lmk);
         if (len == lenMillisCommand && strncmp((const char *)incomingData, "millis", lenMillisCommand) == 0)
             peerRespMillis = p;
+
+        // if (strcmp((const char *)mac, "NodeMCU"))
+        if (p == peers + 1)
+        {
+            AirData ad;
+            memcpy(&ad, incomingData, len);
+            sprintf(line, "%d;%u;%u;%u;%u;%u", ad.temperature, ad.humidity, ad.status, ad.ECO2, ad.TVOC, ad.AQI);
+            Serial.println(line);
+            logger.add("NodeMCU", line);
+        }
     }
     else
         Serial.println("ESP-NOW peer unknown.");

@@ -1,5 +1,4 @@
 #include <WiFi.h>
-// B #include <LittleFS.h>
 #include <Logger.h>
 Logger logger;
 #include <WiFi.h>
@@ -40,7 +39,6 @@ void setup()
     Serial.print("ESP32 Web Server's IP address: ");
     Serial.println(WiFi.localIP());
     configTime(3600, 3600, "rs.pool.ntp.org");
-    // msLastGetTime = millis();
     // Web Server
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
               {
@@ -81,6 +79,7 @@ void loop()
     if (cmd != None)
     {
         Serial.printf("SRX882: %d\n", cmd);
+        logger.add("KitchenSinkWater", "Water detected!");
     }
     // ESP-NOW: reply to "millis" command
     // TODO try to move this code to ESP-NOW:Receive method
