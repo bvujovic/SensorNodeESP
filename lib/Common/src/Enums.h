@@ -14,11 +14,17 @@ enum SrxCommand
 /// This does not define particular device/sensor.
 enum SensorType
 {
-    //? Undefined,
+    UndefinedSensorType,
     /// @brief Simple notfication without any additional data
     SimpleEvent,
-    /// @brief Data from ENS160+AHT21 module
-    RoomTempAirQ
+    /// @brief Data from ENS160+AHT21 module: temp, hum, ECO2, AQI...
+    EnsAht
+};
+
+enum Device
+{
+    UndefinedDevice,
+    TestNodeMCU,
 };
 
 /// @brief Depending on event type hub will handle data differently: log data, send WA notification, buzz...

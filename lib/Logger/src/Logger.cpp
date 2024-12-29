@@ -1,7 +1,7 @@
 #include "Logger.h"
 
 // bool Logger::add(const String &text)
-bool Logger::add(const char *source, const char *message)
+bool Logger::add(const char *type, const char *device, const char *message)
 {
     if (!getLocalTime(&ti))
         return false;
@@ -16,7 +16,7 @@ bool Logger::add(const char *source, const char *message)
     if (fp)
     {
         strftime(strBuffer, sizeof(strBuffer), "%H:%M:%S", &ti);
-        fp.printf("%s\t%s\t%s\n", strBuffer, source, message);
+        fp.printf("%s\t%s\t%s\t%s\n", strBuffer, type, device, message);
         fp.close();
         return true;
     }

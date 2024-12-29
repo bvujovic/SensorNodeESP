@@ -15,4 +15,16 @@ ATtiny sleeps, wakes up on HIGH (PIR...), sends signal via STX882, goes back to 
 - [x] ATtiny sleep, wake up on button, PIR...
 - [x] ATtiny sends signal via STX882, hub receives that signal
 - [x] ESP8266 sending message via ESP Now or HTTP web request to another ESP (8266/32).
-- [ ] Hub - central component: ESP (8266/32) receives and logs messages (source/sensor, type:info/warning/error/alarm..., message/data ...) and then sends WA message or e-mail.
+- [ ] Hub - central component: ESP32 receives and logs messages (source/sensor, type:info/warning/error/alarm..., message/data ...) and then sends WA message or e-mail.
+
+## Links
+https://randomnerdtutorials.com/esp-now-two-way-communication-esp32/
+https://randomnerdtutorials.com/esp-now-two-way-communication-esp8266-nodemcu/
+https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
+https://randomnerdtutorials.com/esp32-esp-now-wi-fi-web-server/
+https://rntlab.com/question/esp-now-gateway-wifi_mode_sta-with-a-wifi-router/
+https://forum.arduino.cc/t/use-esp-now-and-wifi-simultaneously-on-esp32/1034555/16
+
+## Remarks
+ - Works if WiFi channel on the router is set to 1. There might be ways to fix that by using wifi_promiscuous_enable()...
+

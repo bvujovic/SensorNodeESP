@@ -14,20 +14,27 @@ void ledOn(bool on) { digitalWrite(pinLed, !on); }
 #define MIN (60 * SEC)
 
 #define USE_ESP_NOW
+#include "MacAddresses.h"
 
 #ifdef USE_ESP_NOW
 #ifdef ESP32
 #include <esp_now.h>
 #include <WiFi.h>
-uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
+// B uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
+uint8_t *mac = macEsp32BattConn;
 esp_now_peer_info_t peerInfo;
 void OnDataSent(const uint8_t *mac, esp_now_send_status_t sendStatus) { ledOn(sendStatus != ESP_NOW_SEND_SUCCESS); }
 #else
 #include <espnow.h>
 #include <ESP8266WiFi.h>
-uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
+// B uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
+uint8_t *mac = macSoftEsp32BattConn;
 #endif
-void OnDataSent(uint8_t *mac, uint8_t sendStatus) { ledOn(sendStatus != 0); }
+void OnDataSent(uint8_t *mac, uint8_t sendStatus)
+{
+    ledOn(sendStatus != 0);
+    Serial.printf("Send status: 0x%X\n", sendStatus);
+}
 #endif
 
 void setup()
@@ -82,7 +89,8 @@ void setup()
 #else
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
     esp_now_register_send_cb(OnDataSent);
-    esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+    auto res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+    printf("esp_now_add_peer res: 0x%X\n", res);
 #endif
 #endif
 }
@@ -116,7 +124,8 @@ void loop()
     Serial.println(airData.AQI);
 
 #ifdef USE_ESP_NOW
-    esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+    auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+    printf("Send res: 0x%X\n", res);
     delay(10 * MIN);
 #else
     delay(10 * SEC);

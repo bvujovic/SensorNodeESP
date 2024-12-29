@@ -11,6 +11,9 @@ AsyncWebServer server(80);
 SrxParser srx;
 const byte pinRadioIn = 19;
 
+#include "MyBlinky.h"
+MyBlinky buzzer(18);
+
 #include "my_esp_now.h"
 #include "time.h"
 struct tm ti;
@@ -54,8 +57,7 @@ void setup()
                   if (list == "files") // http://192.168.0.80/log?list=files&dir=/2024_12
                       Serial.println(logger.listFiles(req->arg("dir")));
                   if (list == "file") // http://192.168.0.80/log?list=file&name=/2024_12/21_Sat.log
-                      Serial.println(logger.read(req->arg("name")));
-              });
+                      Serial.println(logger.read(req->arg("name"))); });
     server.begin();
 
     // ESP-NOW
@@ -79,7 +81,8 @@ void loop()
     if (cmd != None)
     {
         Serial.printf("SRX882: %d\n", cmd);
-        logger.add("KitchenSinkWater", "Water detected!");
+        buzzer.blinkError();
+        logger.add(StrSensorType[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
     }
     // ESP-NOW: reply to "millis" command
     // TODO try to move this code to ESP-NOW:Receive method
@@ -114,6 +117,6 @@ void loop()
         IPAddress subnet(255, 255, 255, 0);
         WiFi.config(ipa, gateway, subnet);
         Serial.println(WiFi.localIP());
-        logger.add("HUB", "got time");
+        logger.add("HUB", "HUB", "got time");
     }
 }

@@ -6,8 +6,7 @@
 class Logger
 {
 private:
-    //TODO mozda ovi folderName i filePath da se stope u jedan strBuffer ili tako nesto
-    char folderName[10];
+    // B char folderName[10];
     char strBuffer[25];
     //? char lineBuffer[80];
     struct tm ti;
@@ -18,7 +17,7 @@ public:
     //? Citanje kompletnog tekst fajla sa prosledjenim imenom.
     String read(const String &fileName);
     //? Dodavanje teksta u fajl sa prosledjenim imenom.
-    bool add(const char *source, const char *message);
+    bool add(const char *type, const char *device, const char *message);
     // // Pisanje teksta (stari sadrzaj se brise) u fajl sa prosledjenim imenom.
     // static bool write(const String &fileName, const String &text) { return _write(fileName, text, "w"); }
 
