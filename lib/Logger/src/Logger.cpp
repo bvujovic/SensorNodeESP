@@ -1,6 +1,5 @@
 #include "Logger.h"
 
-// bool Logger::add(const String &text)
 bool Logger::add(const char *type, const char *device, const char *message)
 {
     if (!getLocalTime(&ti))
@@ -26,6 +25,8 @@ bool Logger::add(const char *type, const char *device, const char *message)
 
 String Logger::read(const String &fileName)
 {
+    // if (!LittleFS.exists(fileName))
+    //     return "! File doesn't exist.";
     File fp = LittleFS.open(fileName, "r");
     String s = "";
     if (fp)
@@ -46,21 +47,24 @@ String Logger::listFolders()
         while (f = root.openNextFile())
             if (f.isDirectory())
                 str += String(f.name()) + "\n";
+        str += String(" * Used ") + getUsedKB() + " KB / " + getTotalKB() + " KB total.";
         return str;
     }
-    return String();
+    return str;
 }
 
 String Logger::listFiles(const String &folderName)
 {
+    // if (!LittleFS.exists(folderName))
+    //     return "! Folder doesn't exist.";
     String str;
     File folder = LittleFS.open(folderName);
     if (folder)
     {
         File f;
         while (f = folder.openNextFile())
-            str += String(f.name()) + "\n";
+            str += String(f.name()) + "\t" + (f.size() / 1024) + " KB\n";
         return str;
     }
-    return String();
+    return str;
 }
