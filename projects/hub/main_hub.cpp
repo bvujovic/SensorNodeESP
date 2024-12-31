@@ -46,33 +46,33 @@ void setup()
     Serial.print("ESP32 Web Server's IP address: ");
     Serial.println(WiFi.localIP());
     configTime(3600, 3600, "rs.pool.ntp.org");
+
     // Web Server
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-       Serial.println("ESP32 Web Server: New request (/)");
-       request->send(200, "text/html", "<html><body><h1>Hello, ESP32!</h1></body></html>"); });
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *req)
+              { req->send(LittleFS, "/ws/index.html", "text/html"); });
+    server.on("/nodes.png", HTTP_GET, [](AsyncWebServerRequest *req)
+              { req->send(LittleFS, "/ws/nodes.png", "image/png"); });
+
     server.on("/log", HTTP_GET, [](AsyncWebServerRequest *req)
               {
-                  Serial.println("Web Server: New request (/log)");
-                  req->send(200, "text/html", "<html><body><h1>SensorNodeESP HUB: Web server</h1></body></html>");
-                  String list = req->arg("list");
-                  if (list == "dirs") // http://192.168.0.80/log?list=dirs
-                      Serial.println(logger.listFolders());
-                  if (list == "files") // http://192.168.0.80/log?list=files&dir=/2024_12
-                      Serial.println(logger.listFiles(req->arg("dir")));
-                  if (list == "file") // http://192.168.0.80/log?list=file&name=/2024_12/21_Sat.log
-                      Serial.println(logger.read(req->arg("name"))); });
-    server.on("/buzzOnMin", HTTP_GET, [](AsyncWebServerRequest *req)
+        String list = req->arg("list");
+        if (list == "dirs") // http://192.168.0.80/log?list=dirs
+            req->send(200, "text/plain", logger.listFolders());
+        if (list == "files") // http://192.168.0.80/log?list=files&dir=/2024_12
+            req->send(200, "text/plain", logger.listFiles(req->arg("dir")));
+        if (list == "file") // http://192.168.0.80/log?list=file&name=/2024_12/21_Sat.log
+            req->send(200, "text/plain", logger.read(req->arg("name"))); });
+
+    server.on("/buzzOnMinGet", HTTP_GET, [](AsyncWebServerRequest *req)
+              { req->send(200, "text/plain", String(tw.getIsItOn() ? tw.getBuzzOnMin() : 0)); });
+    server.on("/buzzOnMinSave", HTTP_GET, [](AsyncWebServerRequest *req)
               {
-        Serial.println("Web Server: New request (/buzzOnMin)");
-        req->send(200, "text/html", "<html><body><h1>SensorNodeESP HUB: Web server</h1></body></html>");
-        int min = req->arg("min").toInt(); // http://192.168.0.80/buzzOnMin?min=10
-        tw.setBuzzOnMin(min);
-        if (tw.getIsItOn())
-            Serial.printf("TimeWatcher: buzzOnMin = %u\n", tw.getBuzzOnMin());
-        else
-            Serial.println("TimeWatcher is OFF");
-        Serial.printf("Heap: free %u KB / %u KB total\n", ESP.getFreeHeap() / 1024, ESP.getHeapSize() / 1024); });
+                  req->send(200, "text/plain", "");
+                  int min = req->arg("min").toInt(); // http://192.168.0.80/buzzOnMinSave?min=10
+                  tw.setBuzzOnMin(min);
+                  // Serial.printf("Heap: free %u KB / %u KB total\n", ESP.getFreeHeap() / 1024, ESP.getHeapSize() / 1024);
+              });
+              
     server.begin();
 
     // ESP-NOW
@@ -85,8 +85,6 @@ void setup()
     setPeers();
     esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
     esp_now_register_send_cb(OnDataSent);
-
-    // B tw.test();
 }
 
 char msg[10];
@@ -126,7 +124,7 @@ void loop()
             IPAddress subnet(255, 255, 255, 0);
             WiFi.config(ipa, gateway, subnet);
             Serial.println(WiFi.localIP());
-            logger.add("HUB", "HUB", "got time");
+            // logger.add("HUB", "HUB", "got time");
         }
     }
     else if (millis() > msLastGetTime + 1000)

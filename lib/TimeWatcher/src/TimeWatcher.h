@@ -46,20 +46,4 @@ public:
                 this->buzzOnMin = buzzOnMin;
     }
     byte getBuzzOnMin() { return buzzOnMin; }
-    // B
-    // void test()
-    // {
-    //     Serial.println(buzzOnMin = 10);
-    //     for (BuzzData b : buzzes)
-    //         if (b.minutes % buzzOnMin == 0)
-    //             Serial.println(b.minutes);
-    //     Serial.println(buzzOnMin = 30);
-    //     for (BuzzData b : buzzes)
-    //         if (b.minutes % buzzOnMin == 0)
-    //             Serial.println(b.minutes);
-    //     Serial.println(buzzOnMin = 60);
-    //     for (BuzzData b : buzzes)
-    //         if (b.minutes % buzzOnMin == 0)
-    //             Serial.println(b.minutes);
-    // }
 };

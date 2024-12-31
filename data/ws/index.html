@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Node</title>
+    <link rel="icon" href="nodes.png" type="image/png" />
+    <!-- <link rel="icon" href="inc/blue_remote_48.png" type="image/png" /> -->
+    <!-- <link href="inc/style.css" rel="stylesheet" type="text/css"> -->
+    <style>
+        * {
+            font-family: 'Segoe UI', Verdana, sans-serif;
+        }
+
+        .btn {
+            padding: 3px 15px;
+            width: 111px;
+        }
+    </style>
+    <script>
+        /** Bojenje cmbFileName padajuce liste u odnosu na to da li se ceka odgovor servera.
+         * @param {boolean} isWorking
+        */
+        function Loading(isWorking) {
+            cmbFileName.style.backgroundColor = isWorking ? 'red' : 'lightgrey';
+        }
+
+        /** Bojenje Save dugmeta u odnosu na to da li se ceka odgovor servera.
+         * @param {boolean} isWorking
+        */
+        function Saving(isWorking) {
+            btnSaveFile.style.backgroundColor = isWorking ? 'red' : 'lightgrey';
+        }
+
+        function CmbFileNameChange() {
+            txtContent.value = '';
+            const fileName = cmbFileName.value;
+            if (fileName == '---') {
+                Loading(false);
+                return;
+            }
+            Loading(true);
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    Loading(false);
+                    txtContent.value = this.responseText;
+                }
+            };
+            var url = '/loadTextFile?name=' + cmbFileName.value;
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+
+        function SaveFile() {
+            Saving(true);
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200)
+                    Saving(false);
+            };
+            xhttp.open("POST", "/saveTextFile", true);
+            xhttp.setRequestHeader("Content-type", "text/plain");
+            xhttp.send(txtContent.value);
+        }
+
+        function TimeWatcherLoad() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var min = Number(this.responseText);
+                    chkIsItOn.checked = min != 0;
+                    if (min > 0)
+                        selBuzzMin.value = min;
+                }
+            };
+            var url = '/buzzOnMinGet';
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+        function TimeWatcherChange() {
+            var buzzMin = chkIsItOn.checked ? selBuzzMin.value : 0;
+            var xhttp = new XMLHttpRequest();
+            var url = '/buzzOnMinSave?min=' + buzzMin;
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+
+        function LoadFolders() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    const splitLines = this.responseText.split(/\r?\n/);
+                    for (const line of splitLines) {
+                        if (line.trim().length == 0)
+                            continue;
+                        var opt = document.createElement('option');
+                        opt.innerHTML = opt.value = line;
+                        cmbFolders.appendChild(opt);
+                    }
+                }
+            };
+            var url = '/log?list=dirs';
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+        function CmbFoldersChange() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    for (const line of this.responseText.split(/\r?\n/)) {
+                        if (line.trim().length == 0)
+                            continue;
+                        var opt = document.createElement('option');
+                        opt.innerHTML = opt.value = line;
+                        cmbFiles.appendChild(opt);
+                    }
+                }
+            };
+            var url = '/log?list=files&dir=/' + cmbFolders.value;
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+        var fileContent;
+        function CmbFilesChange() {
+            if (cmbFiles.value == '---') {
+                txtFile.innerHTML = '';
+                return;
+            }
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    txtFile.innerHTML = fileContent = this.responseText.trim();
+                    cmbSensors.innerHTML = '';
+                    var sensors = [];
+                    // var devices = [];
+                    for (const line of fileContent.split(/\r?\n/)) {
+                        const parts = line.split('\t');
+                        if (!sensors.includes(parts[1]))
+                            sensors.push(parts[1]);
+                        // if (!devices.includes(parts[2]))
+                        //     devices.push(parts[2]);
+                    }
+                    var opt = document.createElement('option');
+                    opt.innerHTML = opt.value = '---';
+                    cmbSensors.appendChild(opt);
+                    for (const s of sensors) {
+                        opt = document.createElement('option');
+                        opt.innerHTML = opt.value = s;
+                        cmbSensors.appendChild(opt);
+                    }
+                }
+            };
+            var url = '/log?list=file&name=/' + cmbFolders.value + '/' + cmbFiles.value;
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+        function CmbSensorsChange() {
+            const sens = cmbSensors.value;
+            if (sens == '---')
+                txtFile.innerHTML = fileContent;
+            else {
+                var lines = [];
+                for (const line of fileContent.split(/\r?\n/)) {
+                    const parts = line.split('\t');
+                    if (parts[1] == sens) {
+                        lines.push(parts[0] + ";" + parts[2] + ";" + parts[3]);
+                    }
+                    txtFile.innerHTML = lines.join('\n');
+                }
+            }
+        }
+    </script>
+</head>
+
+<body onload="TimeWatcherLoad(); LoadFolders();">
+    <h1>Sensor Node</h1>
+
+    <h2>Time Watcher</h2>
+
+    <input type="checkbox" id="chkIsItOn" onchange="TimeWatcherChange()" />
+    <label for="chkIsItOn">Is it ON</label>
+    <br />
+    <label for="selBuzzMin">Buzz on </label>
+    <select id="selBuzzMin" onchange="TimeWatcherChange()">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="30">30</option>
+        <option value="60">60</option>
+    </select>
+    minutes
+
+    <h2>View data in log files</h2>
+
+    <table>
+        <tr>
+            <td>Folder:</td>
+            <td>
+                <select id="cmbFolders" onchange="CmbFoldersChange();">
+                    <option>---</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>File:</td>
+            <td>
+                <select id="cmbFiles" onchange="CmbFilesChange()">
+                    <option>---</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>Sensor:</td>
+            <td>
+                <select id="cmbSensors" onchange="CmbSensorsChange()">
+                    <option>---</option>
+                </select>
+            </td>
+        </tr>
+        <!-- <tr>
+            <td>Devices:</td>
+            <td>
+                <select id="cmbDevices" onchange="">
+                    <option>---</option>
+                </select>
+            </td>
+        </tr> -->
+        <tr>
+            <td style="vertical-align: top;">File Content:</td>
+            <td>
+                <textarea id="txtFile" cols="80" rows="10"
+                    style="font-family: 'Courier New', Courier, monospace;"></textarea>
+            </td>
+        </tr>
+        <!-- <tr>
+            <td></td>
+            <td><input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="LoadFile()">
+            </td>
+        </tr> -->
+        <!-- <tr>
+            <td></td>
+            <td><a href="/otaUpdate">Start OTA Updates</a></td>
+        </tr> -->
+    </table>
+</body>
+
+</html>

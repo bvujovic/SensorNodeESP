@@ -45,9 +45,9 @@ String Logger::listFolders()
     {
         File f;
         while (f = root.openNextFile())
-            if (f.isDirectory())
+            if (f.isDirectory() && strcmp(f.name(), "ws") != 0) // exclude web server folder
                 str += String(f.name()) + "\n";
-        str += String(" * Used ") + getUsedKB() + " KB / " + getTotalKB() + " KB total.";
+        // str += String(" * Used ") + getUsedKB() + " KB / " + getTotalKB() + " KB total.";
         return str;
     }
     return str;
@@ -63,7 +63,8 @@ String Logger::listFiles(const String &folderName)
     {
         File f;
         while (f = folder.openNextFile())
-            str += String(f.name()) + "\t" + (f.size() / 1024) + " KB\n";
+            str += String(f.name()) + "\n";
+            // str += String(f.name()) + " - " + (f.size() / 1024) + " KB\n";
         return str;
     }
     return str;
