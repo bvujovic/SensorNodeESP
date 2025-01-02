@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sensor Node</title>
     <link rel="icon" href="nodes.png" type="image/png" />
-    <!-- <link rel="icon" href="inc/blue_remote_48.png" type="image/png" /> -->
-    <!-- <link href="inc/style.css" rel="stylesheet" type="text/css"> -->
     <style>
         * {
             font-family: 'Segoe UI', Verdana, sans-serif;
@@ -19,20 +17,6 @@
         }
     </style>
     <script>
-        /** Bojenje cmbFileName padajuce liste u odnosu na to da li se ceka odgovor servera.
-         * @param {boolean} isWorking
-        */
-        function Loading(isWorking) {
-            cmbFileName.style.backgroundColor = isWorking ? 'red' : 'lightgrey';
-        }
-
-        /** Bojenje Save dugmeta u odnosu na to da li se ceka odgovor servera.
-         * @param {boolean} isWorking
-        */
-        function Saving(isWorking) {
-            btnSaveFile.style.backgroundColor = isWorking ? 'red' : 'lightgrey';
-        }
-
         function CmbFileNameChange() {
             txtContent.value = '';
             const fileName = cmbFileName.value;
@@ -88,7 +72,7 @@
             var xhttp = new XMLHttpRequest();
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
-                    const splitLines = this.responseText.split(/\r?\n/);
+                    const splitLines = this.responseText.trim().split(/\r?\n/);
                     for (const line of splitLines) {
                         if (line.trim().length == 0)
                             continue;
@@ -96,27 +80,44 @@
                         opt.innerHTML = opt.value = line;
                         cmbFolders.appendChild(opt);
                     }
+                    cmbFolders.options[cmbFolders.options.length - 1].selected = 'selected';
+                    if (cmbFolders.options.length > 1)
+                        CmbFoldersChange();
                 }
             };
             var url = '/log?list=dirs';
             xhttp.open('GET', url, true); xhttp.send();
         }
+
         function CmbFoldersChange() {
             var xhttp = new XMLHttpRequest();
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
+                    cmbFiles.innerHTML = '';
+                    var opt = document.createElement('option');
+                    opt.innerHTML = opt.value = '---';
+                    cmbFiles.appendChild(opt);
                     for (const line of this.responseText.split(/\r?\n/)) {
                         if (line.trim().length == 0)
                             continue;
-                        var opt = document.createElement('option');
+                        opt = document.createElement('option');
                         opt.innerHTML = opt.value = line;
                         cmbFiles.appendChild(opt);
                     }
+                    cmbFiles.options[cmbFiles.options.length - 1].selected = 'selected';
+                    if (cmbFiles.options.length > 1)
+                        CmbFilesChange();
                 }
             };
             var url = '/log?list=files&dir=/' + cmbFolders.value;
             xhttp.open('GET', url, true); xhttp.send();
         }
+
+        function DisplayText(content) {
+            txtFile.innerHTML = content;
+            txtFile.scrollTop = txtFile.scrollHeight
+        }
+
         var fileContent;
         function CmbFilesChange() {
             if (cmbFiles.value == '---') {
@@ -126,7 +127,7 @@
             var xhttp = new XMLHttpRequest();
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
-                    txtFile.innerHTML = fileContent = this.responseText.trim();
+                    DisplayText(fileContent = this.responseText.trim());
                     cmbSensors.innerHTML = '';
                     var sensors = [];
                     // var devices = [];
@@ -150,10 +151,11 @@
             var url = '/log?list=file&name=/' + cmbFolders.value + '/' + cmbFiles.value;
             xhttp.open('GET', url, true); xhttp.send();
         }
+
         function CmbSensorsChange() {
             const sens = cmbSensors.value;
             if (sens == '---')
-                txtFile.innerHTML = fileContent;
+                DisplayText(fileContent);
             else {
                 var lines = [];
                 for (const line of fileContent.split(/\r?\n/)) {
@@ -161,8 +163,20 @@
                     if (parts[1] == sens) {
                         lines.push(parts[0] + ";" + parts[2] + ";" + parts[3]);
                     }
-                    txtFile.innerHTML = lines.join('\n');
+                    DisplayText(lines.join('\n'));
                 }
+            }
+        }
+
+        function RefreshFile() {
+            if (cmbFolders.value == '---')
+                cmbFolders.focus();
+            else if (cmbFiles.value == '---')
+                cmbFiles.focus();
+            else {
+                CmbFilesChange();
+                if (cmbSensors.value == '---')
+                    CmbSensorsChange();
             }
         }
     </script>
@@ -187,7 +201,7 @@
 
     <h2>View data in log files</h2>
 
-    <table>
+    <table style="width: 100%;">
         <tr>
             <td>Folder:</td>
             <td>
@@ -221,21 +235,17 @@
             </td>
         </tr> -->
         <tr>
-            <td style="vertical-align: top;">File Content:</td>
+            <td style="vertical-align: top; width: 100px;">File Content:</td>
             <td>
-                <textarea id="txtFile" cols="80" rows="10"
-                    style="font-family: 'Courier New', Courier, monospace;"></textarea>
+                <textarea id="txtFile" rows="10"
+                    style="font-family: 'Courier New', Courier, monospace; width: 100%;"></textarea>
             </td>
         </tr>
-        <!-- <tr>
+        <tr>
             <td></td>
-            <td><input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="LoadFile()">
+            <td><input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="RefreshFile()">
             </td>
-        </tr> -->
-        <!-- <tr>
-            <td></td>
-            <td><a href="/otaUpdate">Start OTA Updates</a></td>
-        </tr> -->
+        </tr>
     </table>
 </body>
 
