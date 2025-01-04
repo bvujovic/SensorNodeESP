@@ -1,7 +1,6 @@
 #include <WiFi.h>
 #include <Logger.h>
 Logger logger;
-#include <WiFi.h>
 #include <CredWiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h> // lib_deps = esphome/ESPAsyncWebServer-esphome @ ^3.3.0
@@ -22,6 +21,21 @@ bool isTimeSet = false;
 
 #include "TimeWatcher.h"
 TimeWatcher tw(ti);
+
+#include "NotifyWhatsApp.h"
+
+void wifiConfig(bool isStaticIP)
+{
+    if (isStaticIP)
+    {
+        IPAddress ipa(192, 168, 0, 80);
+        IPAddress gateway(192, 168, 0, 254);
+        IPAddress subnet(255, 255, 255, 0);
+        WiFi.config(ipa, gateway, subnet);
+    }
+    else
+        WiFi.config(IPAddress(), IPAddress(), IPAddress());
+}
 
 void setup()
 {
@@ -72,7 +86,7 @@ void setup()
                   tw.setBuzzOnMin(min);
                   // Serial.printf("Heap: free %u KB / %u KB total\n", ESP.getFreeHeap() / 1024, ESP.getHeapSize() / 1024);
               });
-              
+
     server.begin();
 
     // ESP-NOW
@@ -95,14 +109,21 @@ void loop()
     SrxCommand cmd = srx.refresh(pulseIn(pinRadioIn, LOW), millis());
     if (cmd != None)
     {
+        wifiConfig(false);
+        delay(3000);
         Serial.printf("SRX882: %d\n", cmd);
+        // 💥Stan, kuhinja, sudopera:
+        // VISOK NIVO VODE U SUDOPERI 💦
+        NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
         buzzer.blinkCritical();
+        wifiConfig(true);
         logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
     }
     // ESP-NOW: reply to "millis" command
     // TODO try to move this code to ESP-NOW:Receive method
     if (peerRespMillis != NULL)
     {
+        // TODO vratiti odgovor samo ako je millis() < 4mlrd ili tako nesto - da se ne bi desio overflow u toku merenja vremena
         ulong ms = millis();
         ultoa(ms, msg, 10);
         esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
@@ -119,10 +140,7 @@ void loop()
         else
         {
             // set up IP address after current date/time is retrieved
-            IPAddress ipa(192, 168, 0, 80);
-            IPAddress gateway(192, 168, 0, 254);
-            IPAddress subnet(255, 255, 255, 0);
-            WiFi.config(ipa, gateway, subnet);
+            wifiConfig(true);
             Serial.println(WiFi.localIP());
             // logger.add("HUB", "HUB", "got time");
         }
