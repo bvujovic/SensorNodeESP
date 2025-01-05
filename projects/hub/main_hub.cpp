@@ -1,3 +1,8 @@
+//* ESP32 hub/web server: collects data via ESP-NOW and SRX882 from sensors,
+//* stores it on LittleFS and displays it on 192.168.0.80 in a web browser.
+//* User can be notified with WhatsApp messages and/or buzzer.
+//* Current consumption: ~150mA
+
 #include <WiFi.h>
 #include <Logger.h>
 Logger logger;
@@ -13,6 +18,7 @@ const byte pinRadioIn = 19;
 #include "MyBlinky.h"
 MyBlinky buzzer(18);
 
+char line[80]; // general purpose char array - formating data
 #include "my_esp_now.h"
 #include "time.h"
 struct tm ti;
@@ -84,8 +90,17 @@ void setup()
                   req->send(200, "text/plain", "");
                   int min = req->arg("min").toInt(); // http://192.168.0.80/buzzOnMinSave?min=10
                   tw.setBuzzOnMin(min);
-                  // Serial.printf("Heap: free %u KB / %u KB total\n", ESP.getFreeHeap() / 1024, ESP.getHeapSize() / 1024);
               });
+
+    server.on("/statusInfo", HTTP_GET, [](AsyncWebServerRequest *req)
+              {
+        getLocalTime(&ti);
+        strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
+        String s = String("Current time: ") + line \
+        + "Heap: free " + (ESP.getFreeHeap() / 1024) + " KB / " + (ESP.getHeapSize() / 1024) + " KB total\n" \
+        + "Storage: free " + ((LittleFS.totalBytes() - LittleFS.usedBytes()) / 1024) + " KB / " + (LittleFS.totalBytes() / 1024) + " KB total\n";
+        s.replace("\n", "<br>");
+        req->send(200, "text/plain", s); });
 
     server.begin();
 
@@ -100,8 +115,6 @@ void setup()
     esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
     esp_now_register_send_cb(OnDataSent);
 }
-
-char msg[10];
 
 void loop()
 {
@@ -125,7 +138,7 @@ void loop()
     {
         // TODO vratiti odgovor samo ako je millis() < 4mlrd ili tako nesto - da se ne bi desio overflow u toku merenja vremena
         ulong ms = millis();
-        ultoa(ms, msg, 10);
+        ultoa(ms, line, 10);
         esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
         peerRespMillis = NULL;
     }

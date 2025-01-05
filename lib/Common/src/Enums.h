@@ -25,6 +25,7 @@ enum Device
 {
     UndefinedDevice,
     TestNodeMCU,
+    WemosExtAnt,
 };
 
 /// @brief Depending on event type hub will handle data differently: log data, send WA notification, buzz...

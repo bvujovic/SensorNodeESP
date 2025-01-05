@@ -12,6 +12,7 @@ const char *StrSensorTypes[] = {
 const char *StrDevices[] = {
     "Undefined",
     "TestNodeMCU",
+    "WemosExtAnt",
 };
 
 struct peer_info
@@ -25,7 +26,6 @@ peer_info peers[4];               // ESP-NOW peers
 int cntPeers;                     // peers count
 int lenMillisCommand;             // length of (string) "millis" command
 peer_info *peerRespMillis = NULL; // send millis to this peer
-char line[80];                    // general purpose string - formating data
 
 void printMAC(const uint8_t *mac);
 void addPeers();
@@ -49,8 +49,7 @@ void setPeers()
     // uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
     // esp_now_add_peer(mac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     setPeer(peers + 1, macEsp8266NodeMCU, SensorType::EnsAht, Device::TestNodeMCU);
-    memcpy(peers[2].peer_addr, macEsp8266WemosExtAnt, 6);
-    peers[2].type = SensorType::EnsAht;
+    setPeer(peers + 2, macEsp8266WemosExtAnt, SensorType::EnsAht, Device::WemosExtAnt);
     memcpy(peers[3].peer_addr, macEsp32C3, 6);
 
     addPeers();

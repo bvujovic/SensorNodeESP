@@ -179,27 +179,25 @@
                     CmbSensorsChange();
             }
         }
+
+        function StatusInfo() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    spnStatusInfo.innerHTML = this.responseText;
+                }
+            };
+            var url = '/statusInfo';
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+
     </script>
 </head>
 
-<body onload="TimeWatcherLoad(); LoadFolders();">
+<body onload="TimeWatcherLoad(); LoadFolders(); ">
     <h1>Sensor Node</h1>
 
-    <h2>Time Watcher</h2>
-
-    <input type="checkbox" id="chkIsItOn" onchange="TimeWatcherChange()" />
-    <label for="chkIsItOn">Is it ON</label>
-    <br />
-    <label for="selBuzzMin">Buzz on </label>
-    <select id="selBuzzMin" onchange="TimeWatcherChange()">
-        <option value="5">5</option>
-        <option value="10">10</option>
-        <option value="30">30</option>
-        <option value="60">60</option>
-    </select>
-    minutes
-
-    <h2>View data in log files</h2>
+    <h2>Data in log files</h2>
 
     <table style="width: 100%;">
         <tr>
@@ -247,6 +245,25 @@
             </td>
         </tr>
     </table>
+
+    <h2><a href="#" onclick="StatusInfo()">Status Info</a></h2>
+    <span id="spnStatusInfo"></span>
+    <!-- <input type="button" id='btnRefreshStatusInfo' class="btn" value="Refresh" onclick="StatusInfo()"
+        style="margin-top: 15px;"> -->
+
+    <h2>Time Watcher</h2>
+
+    <input type="checkbox" id="chkIsItOn" onchange="TimeWatcherChange()" />
+    <label for="chkIsItOn">Is it ON</label>
+    <br />
+    <label for="selBuzzMin">Buzz on </label>
+    <select id="selBuzzMin" onchange="TimeWatcherChange()">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="30">30</option>
+        <option value="60">60</option>
+    </select>
+    minutes
 </body>
 
 </html>
