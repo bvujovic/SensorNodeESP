@@ -115,7 +115,8 @@
 
         function DisplayText(content) {
             txtFile.innerHTML = content;
-            txtFile.scrollTop = txtFile.scrollHeight
+            txtFile.scrollTop = txtFile.scrollHeight;
+            spnSensorTypeComment.innerHTML = '';
         }
 
         var fileContent;
@@ -165,6 +166,14 @@
                     }
                     DisplayText(lines.join('\n'));
                 }
+                var xhttp = new XMLHttpRequest();
+                xhttp.onreadystatechange = function () {
+                    if (this.readyState == 4 && this.status == 200) {
+                        spnSensorTypeComment.innerHTML = this.responseText;
+                    }
+                };
+                var url = '/sensorTypeComment?sensor=' + cmbSensors.value;
+                xhttp.open('GET', url, true); xhttp.send();
             }
         }
 
@@ -222,6 +231,7 @@
                 <select id="cmbSensors" onchange="CmbSensorsChange()">
                     <option>---</option>
                 </select>
+                <span id="spnSensorTypeComment" style="margin-left: 10px;"></span>
             </td>
         </tr>
         <!-- <tr>
@@ -246,10 +256,16 @@
         </tr>
     </table>
 
-    <h2><a href="#" onclick="StatusInfo()">Status Info</a></h2>
+    <h2>Links</h2>
+    <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">IQ Air - Banovo Brdo</a> <br>
+    <a href="https://www.google.com/search?q=vreme+banovo+brdo">Weather - Banovo Brdo</a> <br>
+
+    <div style="margin: 20px 0;">
+        <h2 style="display: inline; margin-right: 20px;">Status Info</h2>
+        <button onclick="StatusInfo()">🔄</button>
+        <button onclick="spnStatusInfo.innerHTML = ''">❌</button>
+    </div>
     <span id="spnStatusInfo"></span>
-    <!-- <input type="button" id='btnRefreshStatusInfo' class="btn" value="Refresh" onclick="StatusInfo()"
-        style="margin-top: 15px;"> -->
 
     <h2>Time Watcher</h2>
 

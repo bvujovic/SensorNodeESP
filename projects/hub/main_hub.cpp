@@ -83,14 +83,23 @@ void setup()
         if (list == "file") // http://192.168.0.80/log?list=file&name=/2024_12/21_Sat.log
             req->send(200, "text/plain", logger.read(req->arg("name"))); });
 
+    server.on("/sensorTypeComment", HTTP_GET, [](AsyncWebServerRequest *req)
+              {
+        const char *sensor = req->arg("sensor").c_str(); // http://192.168.0.80/sensorTypeComment?sensor=EnsAht
+        int sensorType = SensorType::UndefinedSensorType;
+        int n = sizeof(StrSensorTypes) / sizeof(char *);
+        for (size_t i = 0; i < n; i++)
+            if (strcmp(StrSensorTypes[i], sensor) == 0)
+                sensorType = i;
+        req->send(200, "text/plain", SensorTypesComment[sensorType]); });
+
     server.on("/buzzOnMinGet", HTTP_GET, [](AsyncWebServerRequest *req)
               { req->send(200, "text/plain", String(tw.getIsItOn() ? tw.getBuzzOnMin() : 0)); });
     server.on("/buzzOnMinSave", HTTP_GET, [](AsyncWebServerRequest *req)
               {
                   req->send(200, "text/plain", "");
                   int min = req->arg("min").toInt(); // http://192.168.0.80/buzzOnMinSave?min=10
-                  tw.setBuzzOnMin(min);
-              });
+                  tw.setBuzzOnMin(min); });
 
     server.on("/statusInfo", HTTP_GET, [](AsyncWebServerRequest *req)
               {

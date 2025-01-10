@@ -9,6 +9,12 @@ const char *StrSensorTypes[] = {
     "EnsAht",
 };
 
+const char *SensorTypesComment[] = {
+    "/",
+    "Logged event without additional data",
+    "Air quality: temp(C), hum(%), status, eqCO2(ppm), TVOC, AQI",
+};
+
 const char *StrDevices[] = {
     "Undefined",
     "TestNodeMCU",
