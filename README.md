@@ -2,20 +2,25 @@
 
 Data from sensor (PIR, CO2, smoke/water detectors...) is logged and sometimes sent to user (WhatsApp message, E-mail).
 
-ATtiny sleeps, wakes up on HIGH (PIR...), sends signal via STX882, goes back to sleep. Device can be battery powered. 
+## Client: ESP8266 & ENS160+AHT21
+ESP wakes up every 10 minutes and sends data from sensors to the hub (server) via ESP-NOW.
+![Client: ESP8266 & ENS160+AHT21](projects/ens160_aht21/docs/nodemcu_ens160_aht21.jpg)
 
-## Sender: ATtiny85, STX882, PIR - test device
-![ATtiny85, STX882 - test device](projects/attiny_stx882/docs/attiny_stx882_test_device_pir.jpg)
+## Client: ATtiny85 & STX882
+ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...), sends signal via STX882, goes back to sleep. Device can be battery powered.
+![Client: ATtiny85 (STX882...)](projects/attiny_stx882/docs/attiny_stx882_test_device_pir.jpg)
 
-## Receiver: ESP8266, SRX882 - test device
-![ESP8266, SRX882 - test device](projects/attiny_stx882/docs/esp8266_srx882_test_device.jpg)
+## Server: ESP32 (SRX882, buzzer)
+![Server: ESP32 (SRX882, buzzer)](projects/hub/docs/esp32_server_device.jpg)
+
+## Web app - interface
+![Web app - interface](projects/hub/docs/web_page_interface.png)
 
 ## TODO
 
-- [x] ATtiny sleep, wake up on button, PIR...
-- [x] ATtiny sends signal via STX882, hub receives that signal
-- [x] ESP8266 sending message via ESP Now or HTTP web request to another ESP (8266/32).
-- [ ] Hub - central component: ESP32 receives and logs messages (source/sensor, type:info/warning/error/alarm..., message/data ...) and then sends WA message or e-mail.
+- [ ] Add notification control (when to send WA message, beep etc) to web app
+- [ ] Add PlannedOutagesChecker to the project
+- [ ] Add data visualization using some JS library
 
 ## Links
 https://randomnerdtutorials.com/esp-now-two-way-communication-esp32/
@@ -26,5 +31,5 @@ https://rntlab.com/question/esp-now-gateway-wifi_mode_sta-with-a-wifi-router/
 https://forum.arduino.cc/t/use-esp-now-and-wifi-simultaneously-on-esp32/1034555/16
 
 ## Remarks
- - Works if WiFi channel on the router is set to 1. There might be ways to fix that by using wifi_promiscuous_enable()...
+ - ESP-NOW communication works if WiFi channel on the router is set to 1. There might be ways to fix that by using wifi_promiscuous_enable()...
 

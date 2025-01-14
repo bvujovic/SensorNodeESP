@@ -123,7 +123,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             memcpy(&ad, incomingData, len);
             sprintf(line, "%d;%u;%u;%u;%u;%u", ad.temperature, ad.humidity, ad.status, ad.ECO2, ad.TVOC, ad.AQI);
             Serial.println(line);
-            if (ad.AQI == 4)
+            if (ad.ECO2 >= 1000)
                 buzzer.blinkWarning();
             if (ad.AQI == 5)
                 buzzer.blinkCritical();

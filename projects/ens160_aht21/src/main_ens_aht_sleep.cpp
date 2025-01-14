@@ -154,7 +154,7 @@ void loop()
     printf("Send res: 0x%X\n", res);
     if (res != 0)
         ledOn_10sec();
-    ESP.deepSleep(10 * MIN * 1000);
+    ESP.deepSleep((10 * MIN + 9 * SEC) * 1000);
 #else
     ESP.deepSleep(10 * SEC * 1000);
 #endif
