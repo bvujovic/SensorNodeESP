@@ -19,8 +19,8 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## TODO
 
 - [ ] Add notification control (when to send WA message, beep etc) to web app
-- [ ] Add PlannedOutagesChecker to the project
 - [ ] Add data visualization using some JS library
+- [x] ~~Add PlannedOutagesChecker to the project~~
 
 ## Links
 https://randomnerdtutorials.com/esp-now-two-way-communication-esp32/

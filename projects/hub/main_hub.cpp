@@ -6,6 +6,7 @@
 #include <WiFi.h>
 #include <Logger.h>
 Logger logger;
+
 #include <CredWiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h> // lib_deps = esphome/ESPAsyncWebServer-esphome @ ^3.3.0
@@ -43,31 +44,8 @@ void wifiConfig(bool isStaticIP)
         WiFi.config(IPAddress(), IPAddress(), IPAddress());
 }
 
-void setup()
+void startWebServer()
 {
-    Serial.begin(115200);
-    Serial.println("\n*** SensorNodeESP: HUB ***");
-    pinMode(pinRadioIn, INPUT);
-    LittleFS.begin();
-    logger.setTimeInfo(ti);
-    tw.setBlinky(buzzer.getBlinky());
-
-    // WiFi
-    WiFi.mode(WIFI_AP_STA);
-    //? WiFi.persistent(false);
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-    Serial.print("Connecting to WiFi");
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        Serial.print('.');
-        delay(1000);
-    }
-    Serial.println(" connected.");
-    Serial.print("ESP32 Web Server's IP address: ");
-    Serial.println(WiFi.localIP());
-    configTime(3600, 3600, "rs.pool.ntp.org");
-
-    // Web Server
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *req)
               { req->send(LittleFS, "/ws/index.html", "text/html"); });
     server.on("/nodes.png", HTTP_GET, [](AsyncWebServerRequest *req)
@@ -93,25 +71,84 @@ void setup()
                 sensorType = i;
         req->send(200, "text/plain", SensorTypesComment[sensorType]); });
 
+    server.on("/nots", HTTP_GET, [](AsyncWebServerRequest *req)
+              {
+        if (req->hasArg("id")) // http://192.168.0.80/nots?id=B1&val=1
+        {
+            int id = req->arg("id").substring(1).toInt();
+            int val = req->arg("val").toInt();
+            for (auto &&n : notifications)
+                if (n.id == id)
+                {
+                    if (req->arg("id")[0] == 'B')
+                        n.buzz = val;
+                    else
+                        n.wa_msg = val;
+                }
+            req->send(200, "text/plain", "");
+        }
+        else // http://192.168.0.80/nots
+        {
+            // TODO use sprintf()
+            String s;
+            for (auto &&n : notifications)
+            {
+                // Serial.printf("%d, %s, %d, %d \n", n.id, n.name.c_str(), n.buzz, n.wa_msg);
+                sprintf(line, "%d\t%s\t%d\t%d\n", n.id, n.name.c_str(), n.buzz, n.wa_msg);
+                s += line;
+            }
+            req->send(200, "text/plain", s);
+        } });
+
     server.on("/buzzOnMinGet", HTTP_GET, [](AsyncWebServerRequest *req)
               { req->send(200, "text/plain", String(tw.getIsItOn() ? tw.getBuzzOnMin() : 0)); });
     server.on("/buzzOnMinSave", HTTP_GET, [](AsyncWebServerRequest *req)
               {
-                  req->send(200, "text/plain", "");
-                  int min = req->arg("min").toInt(); // http://192.168.0.80/buzzOnMinSave?min=10
-                  tw.setBuzzOnMin(min); });
+        req->send(200, "text/plain", "");
+        int min = req->arg("min").toInt(); // http://192.168.0.80/buzzOnMinSave?min=10
+        tw.setBuzzOnMin(min); });
 
     server.on("/statusInfo", HTTP_GET, [](AsyncWebServerRequest *req)
               {
         getLocalTime(&ti);
         strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
+        int percHeap = 100 * ESP.getFreeHeap() / ESP.getHeapSize();
+        size_t freeStorage = LittleFS.totalBytes() - LittleFS.usedBytes();
+        int percStorage = 100 * freeStorage / LittleFS.totalBytes();
         String s = String("Current time: ") + line \
-        + "Heap: free " + (ESP.getFreeHeap() / 1024) + " KB / " + (ESP.getHeapSize() / 1024) + " KB total\n" \
-        + "Storage: free " + ((LittleFS.totalBytes() - LittleFS.usedBytes()) / 1024) + " KB / " + (LittleFS.totalBytes() / 1024) + " KB total\n";
+        + "Heap: free " + (ESP.getFreeHeap() / 1024) + " KB / " + (ESP.getHeapSize() / 1024) + " KB total (" + percHeap + "%)\n" \
+        + "Storage: free " + (freeStorage / 1024) + " KB / " + (LittleFS.totalBytes() / 1024) + " KB total (" + percStorage + "%)\n";
         s.replace("\n", "<br>");
         req->send(200, "text/plain", s); });
 
     server.begin();
+}
+
+void setup()
+{
+    Serial.begin(115200);
+    Serial.println("\n*** SensorNodeESP: HUB ***");
+    pinMode(pinRadioIn, INPUT);
+    LittleFS.begin();
+    logger.setTimeInfo(ti);
+    tw.setBlinky(buzzer.getBlinky());
+
+    // WiFi
+    WiFi.mode(WIFI_AP_STA);
+    //? WiFi.persistent(false);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.print('.');
+        delay(1000);
+    }
+    Serial.println(" connected.");
+    Serial.print("ESP32 Web Server's IP address: ");
+    Serial.println(WiFi.localIP());
+    configTime(3600, 3600, "rs.pool.ntp.org");
+
+    startWebServer();
 
     // ESP-NOW
     if (esp_now_init() != ESP_OK)
@@ -131,14 +168,18 @@ void loop()
     SrxCommand cmd = srx.refresh(pulseIn(pinRadioIn, LOW), millis());
     if (cmd != None)
     {
-        wifiConfig(false);
-        delay(3000);
         Serial.printf("SRX882: %d\n", cmd);
-        // 💥Stan, kuhinja, sudopera:
-        // VISOK NIVO VODE U SUDOPERI 💦
-        NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
-        buzzer.blinkCritical();
-        wifiConfig(true);
+        if (notifications[WaterDetected].wa_msg)
+        {
+            wifiConfig(false);
+            delay(3000);
+            // 💥Stan, kuhinja, sudopera:
+            // VISOK NIVO VODE U SUDOPERI 💦
+            NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
+            wifiConfig(true);
+        }
+        if (notifications[WaterDetected].buzz)
+            buzzer.blinkCritical();
         logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
     }
     // ESP-NOW: reply to "millis" command

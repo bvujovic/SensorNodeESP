@@ -21,6 +21,29 @@ const char *StrDevices[] = {
     "WemosExtAnt",
 };
 
+struct Notification
+{
+    int id;
+    String name;
+    bool buzz;
+    bool wa_msg;
+};
+
+enum EnumNots
+{
+    WaterDetected,
+    ECO2_1000,
+    AQI4,
+    AQI5,
+};
+
+Notification notifications[] = {
+    {WaterDetected, "Water detected", 1, 1},
+    {ECO2_1000, "Air quality: ECO2 >= 1000", 1, 0},
+    {AQI4, "Air quality: AQI >= 4", 0, 0},
+    {AQI5, "Air quality: AQI >= 5", 1, 0},
+};
+
 struct peer_info
 {
     uint8_t peer_addr[ESP_NOW_ETH_ALEN];
@@ -28,7 +51,7 @@ struct peer_info
     Device device;
 };
 
-peer_info peers[4];               // ESP-NOW peers
+peer_info peers[2];               // ESP-NOW peers
 int cntPeers;                     // peers count
 int lenMillisCommand;             // length of (string) "millis" command
 peer_info *peerRespMillis = NULL; // send millis to this peer
@@ -46,17 +69,17 @@ void setPeer(peer_info *pi, uint8_t *mac, SensorType type, Device device)
 void setPeers()
 {
     lenMillisCommand = strlen("millis");
-    cntPeers = sizeof(peers) / sizeof(esp_now_peer_info);
-
-    memcpy(peers[0].peer_addr, macEsp32Dev, 6);
+    // cntPeers = sizeof(peers) / sizeof(esp_now_peer_info);
+    cntPeers = 0;
+    // memcpy(peers[0].peer_addr, macEsp32Dev, 6);
     //* My NodeMCU's MAC address: 84:F3:EB:77:04:BA    It works with these settings:
     //* https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
     //* WiFi.softAPmacAddress is created from WiFi.macAddress by adding 1 to the last byte
     // uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
     // esp_now_add_peer(mac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
-    setPeer(peers + 1, macEsp8266NodeMCU, SensorType::EnsAht, Device::TestNodeMCU);
-    setPeer(peers + 2, macEsp8266WemosExtAnt, SensorType::EnsAht, Device::WemosExtAnt);
-    memcpy(peers[3].peer_addr, macEsp32C3, 6);
+    setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::EnsAht, Device::TestNodeMCU);
+    setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::EnsAht, Device::WemosExtAnt);
+    // memcpy(peers[3].peer_addr, macEsp32C3, 6);
 
     addPeers();
 }
@@ -123,9 +146,11 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             memcpy(&ad, incomingData, len);
             sprintf(line, "%d;%u;%u;%u;%u;%u", ad.temperature, ad.humidity, ad.status, ad.ECO2, ad.TVOC, ad.AQI);
             Serial.println(line);
-            if (ad.ECO2 >= 1000)
+            if (notifications[ECO2_1000].buzz && ad.ECO2 >= 1000)
                 buzzer.blinkWarning();
-            if (ad.AQI == 5)
+            if (notifications[AQI4].buzz && ad.AQI == 4)
+                buzzer.blinkWarning();
+            if (notifications[AQI5].buzz && ad.AQI == 5)
                 buzzer.blinkCritical();
             logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
         }

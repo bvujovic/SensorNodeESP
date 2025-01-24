@@ -15,6 +15,10 @@
             padding: 3px 15px;
             width: 111px;
         }
+
+        th {
+            text-align: left;
+        }
     </style>
     <script>
         function CmbFileNameChange() {
@@ -200,10 +204,48 @@
             xhttp.open('GET', url, true); xhttp.send();
         }
 
+        function LoadNotifs() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    alert(this.responseText);
+                    // 0	Water detected	1	1
+                    i = 1;
+                    for (const line of this.responseText.split(/\r?\n/)) {
+                        const parts = line.split('\t');
+                        var row = tblNotifSetts.insertRow(i++);
+                        var cell1 = row.insertCell(0);
+                        var cell2 = row.insertCell(1);
+                        var cell3 = row.insertCell(2);
+                        cell1.innerHTML = parts[1];
+                        cell2.innerHTML = "<td><input type='checkbox' id='chk_B" + parts[0] + "'' " + (parts[2] == "1" ? "checked" : "") + " ></td>";
+                        cell3.innerHTML = "<td><input type='checkbox' id='chkAQI5_W" + parts[0] + "' " + (parts[3] == "1" ? "checked" : "") + "></td>";
+                    }
+                }
+            };
+            var url = 'http://192.168.0.80/nots';
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+
+        function ChangeNotif(chk) {
+            idx = chk.id.lastIndexOf("_");
+            if (idx == -1)
+                return;
+            id = chk.id.substring(idx + 1);
+            var xhttp = new XMLHttpRequest();
+            // xhttp.onreadystatechange = function () {
+            //     if (this.readyState == 4 && this.status == 200) {
+            //         spnStatusInfo.innerHTML = this.responseText;
+            //     }
+            // };
+            var url = 'http://192.168.0.80/nots?id=' + id + "&val=" + Number(chk.checked);
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+
     </script>
 </head>
 
-<body onload="TimeWatcherLoad(); LoadFolders(); ">
+<body onload="LoadNotifs(); TimeWatcherLoad(); LoadFolders(); ">
     <h1>Sensor Node</h1>
 
     <h2>Data in log files</h2>
@@ -256,14 +298,33 @@
         </tr>
     </table>
 
+    <h2>Notification Settings</h2>
+    <table id="tblNotifSetts">
+        <tr>
+            <th>Event</th>
+            <th>Buzz</th>
+            <th>WA msg</th>
+        </tr>
+        <tr>
+            <td>Water detected TEST</td>
+            <td><input type="checkbox" id="chkWater_B0" onchange="ChangeNotif(this)"></td>
+            <td><input type="checkbox" id="chkWater_W0" onchange="ChangeNotif(this)"></td>
+        </tr>
+        <tr>
+            <td>Air quality: AQI >= 4 TEST</td>
+            <td><input type="checkbox" id="chkAQI4_B1" onchange="ChangeNotif(this)"></td>
+            <td><input type="checkbox" id="chkAQI4_W1" onchange="ChangeNotif(this)"></td>
+        </tr>
+    </table>
+
     <h2>Links</h2>
     <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">IQ Air - Banovo Brdo</a> <br>
     <a href="https://www.google.com/search?q=vreme+banovo+brdo">Weather - Banovo Brdo</a> <br>
 
     <div style="margin: 20px 0;">
         <h2 style="display: inline; margin-right: 20px;">Status Info</h2>
-        <button onclick="StatusInfo()">🔄</button>
-        <button onclick="spnStatusInfo.innerHTML = ''">❌</button>
+        <button onclick="StatusInfo()" title="Refresh status info">🔄</button>
+        <button onclick="spnStatusInfo.innerHTML = ''" title="Clear status info">❌</button>
     </div>
     <span id="spnStatusInfo"></span>
 
