@@ -89,11 +89,9 @@ void startWebServer()
         }
         else // http://192.168.0.80/nots
         {
-            // TODO use sprintf()
             String s;
             for (auto &&n : notifications)
             {
-                // Serial.printf("%d, %s, %d, %d \n", n.id, n.name.c_str(), n.buzz, n.wa_msg);
                 sprintf(line, "%d\t%s\t%d\t%d\n", n.id, n.name.c_str(), n.buzz, n.wa_msg);
                 s += line;
             }

@@ -208,22 +208,22 @@
             var xhttp = new XMLHttpRequest();
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
-                    alert(this.responseText);
                     // 0	Water detected	1	1
                     i = 1;
-                    for (const line of this.responseText.split(/\r?\n/)) {
+                    for (const line of this.responseText.trim().split(/\r?\n/)) {
                         const parts = line.split('\t');
                         var row = tblNotifSetts.insertRow(i++);
                         var cell1 = row.insertCell(0);
                         var cell2 = row.insertCell(1);
                         var cell3 = row.insertCell(2);
                         cell1.innerHTML = parts[1];
-                        cell2.innerHTML = "<td><input type='checkbox' id='chk_B" + parts[0] + "'' " + (parts[2] == "1" ? "checked" : "") + " ></td>";
-                        cell3.innerHTML = "<td><input type='checkbox' id='chkAQI5_W" + parts[0] + "' " + (parts[3] == "1" ? "checked" : "") + "></td>";
+                        cell2.innerHTML = "<td><input type='checkbox' id='chk_B" + parts[0] + "' " + (parts[2] == "1" ? "checked" : "") + " onchange='ChangeNotif(this)'></td>";
+                        cell3.innerHTML = "<td><input type='checkbox' id='chk_W" + parts[0] + "' " + (parts[3] == "1" ? "checked" : "") + " onchange='ChangeNotif(this)'></td>";
+                        //                     <input type='checkbox' id='chkWater_B0' onchange='ChangeNotif(this)'>
                     }
                 }
             };
-            var url = 'http://192.168.0.80/nots';
+            var url = '/nots';
             xhttp.open('GET', url, true); xhttp.send();
         }
 
@@ -233,12 +233,7 @@
                 return;
             id = chk.id.substring(idx + 1);
             var xhttp = new XMLHttpRequest();
-            // xhttp.onreadystatechange = function () {
-            //     if (this.readyState == 4 && this.status == 200) {
-            //         spnStatusInfo.innerHTML = this.responseText;
-            //     }
-            // };
-            var url = 'http://192.168.0.80/nots?id=' + id + "&val=" + Number(chk.checked);
+            var url = '/nots?id=' + id + "&val=" + Number(chk.checked);
             xhttp.open('GET', url, true); xhttp.send();
         }
 
@@ -304,16 +299,6 @@
             <th>Event</th>
             <th>Buzz</th>
             <th>WA msg</th>
-        </tr>
-        <tr>
-            <td>Water detected TEST</td>
-            <td><input type="checkbox" id="chkWater_B0" onchange="ChangeNotif(this)"></td>
-            <td><input type="checkbox" id="chkWater_W0" onchange="ChangeNotif(this)"></td>
-        </tr>
-        <tr>
-            <td>Air quality: AQI >= 4 TEST</td>
-            <td><input type="checkbox" id="chkAQI4_B1" onchange="ChangeNotif(this)"></td>
-            <td><input type="checkbox" id="chkAQI4_W1" onchange="ChangeNotif(this)"></td>
         </tr>
     </table>
 
