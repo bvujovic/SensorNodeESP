@@ -12,7 +12,7 @@ const char *StrSensorTypes[] = {
 const char *SensorTypesComment[] = {
     "/",
     "Logged event without additional data",
-    "Air quality: temp(C), hum(%), status, eqCO2(ppm), TVOC, AQI",
+    "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
 };
 
 const char *StrDevices[] = {
@@ -32,17 +32,26 @@ struct Notification
 enum EnumNots
 {
     WaterDetected,
-    ECO2_1000,
     AQI4,
+    ECO2_1000,
     AQI5,
 };
 
 Notification notifications[] = {
     {WaterDetected, "Water detected", 1, 1},
-    {ECO2_1000, "Air quality: ECO2 >= 1000", 1, 0},
     {AQI4, "Air quality: AQI >= 4", 0, 0},
-    {AQI5, "Air quality: AQI >= 5", 1, 0},
+    {ECO2_1000, "Air quality: ECO2 >= 1000", 0, 0},
+    {AQI5, "Air quality: AQI >= 5", 0, 0},
 };
+
+/// @brief Gets the notification, given its id (EnumNots).
+Notification *GetNotif(EnumNots e)
+{
+    for (auto &&n : notifications)
+        if (n.id == e)
+            return &n;
+    return NULL;
+}
 
 struct peer_info
 {
@@ -146,11 +155,11 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             memcpy(&ad, incomingData, len);
             sprintf(line, "%d;%u;%u;%u;%u;%u", ad.temperature, ad.humidity, ad.status, ad.ECO2, ad.TVOC, ad.AQI);
             Serial.println(line);
-            if (notifications[ECO2_1000].buzz && ad.ECO2 >= 1000)
+            if (GetNotif(ECO2_1000)->buzz && ad.ECO2 >= 1000)
                 buzzer.blinkWarning();
-            if (notifications[AQI4].buzz && ad.AQI == 4)
+            if (GetNotif(AQI4)->buzz && ad.AQI == 4)
                 buzzer.blinkWarning();
-            if (notifications[AQI5].buzz && ad.AQI == 5)
+            if (GetNotif(AQI5)->buzz && ad.AQI == 5)
                 buzzer.blinkCritical();
             logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
         }

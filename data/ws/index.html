@@ -4,11 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0"> -->
     <title>Sensor Node</title>
-    <link rel="icon" href="nodes.png" type="image/png" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
+    <link rel="icon" href="img/nodes.png" type="image/png" />
     <style>
         * {
             font-family: 'Segoe UI', Verdana, sans-serif;
+            background-color: #121212;
+            color: #fff;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+        }
+
+        .segment {
+            margin-left: 20px;
         }
 
         .btn {
@@ -18,6 +34,31 @@
 
         th {
             text-align: left;
+        }
+
+        .firstCol {
+            width: 80px;
+        }
+
+        /* .combo { */
+        select {
+            width: 100px;
+        }
+
+        #divChart {
+            margin-top: 10px;
+        }
+
+        #tblChart {
+            visibility: collapse;
+            /* width: 50%; */
+            margin-right: 20px;
+            /* max-width: none; */
+        }
+
+        .linkIcon {
+            width: 16px;
+            margin-right: 8px;
         }
     </style>
     <script>
@@ -65,7 +106,10 @@
             var url = '/buzzOnMinGet';
             xhttp.open('GET', url, true); xhttp.send();
         }
-        function TimeWatcherChange() {
+
+        function TimeWatcherChange(sender) {
+            if (sender.id == 'selBuzzMin')
+                chkIsItOn.checked = true;
             var buzzMin = chkIsItOn.checked ? selBuzzMin.value : 0;
             var xhttp = new XMLHttpRequest();
             var url = '/buzzOnMinSave?min=' + buzzMin;
@@ -80,9 +124,7 @@
                     for (const line of splitLines) {
                         if (line.trim().length == 0)
                             continue;
-                        var opt = document.createElement('option');
-                        opt.innerHTML = opt.value = line;
-                        cmbFolders.appendChild(opt);
+                        cmbFolders.appendChild(CreateOption(line, line));
                     }
                     cmbFolders.options[cmbFolders.options.length - 1].selected = 'selected';
                     if (cmbFolders.options.length > 1)
@@ -98,15 +140,11 @@
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
                     cmbFiles.innerHTML = '';
-                    var opt = document.createElement('option');
-                    opt.innerHTML = opt.value = '---';
-                    cmbFiles.appendChild(opt);
+                    cmbFiles.appendChild(CreateOption(NO_VALUE, NO_VALUE));
                     for (const line of this.responseText.split(/\r?\n/)) {
                         if (line.trim().length == 0)
                             continue;
-                        opt = document.createElement('option');
-                        opt.innerHTML = opt.value = line;
-                        cmbFiles.appendChild(opt);
+                        cmbFiles.appendChild(CreateOption(line, line));
                     }
                     cmbFiles.options[cmbFiles.options.length - 1].selected = 'selected';
                     if (cmbFiles.options.length > 1)
@@ -123,7 +161,10 @@
             spnSensorTypeComment.innerHTML = '';
         }
 
+        const NO_VALUE = '---';
+        var selectedSensor = NO_VALUE;
         var fileContent;
+
         function CmbFilesChange() {
             if (cmbFiles.value == '---') {
                 txtFile.innerHTML = '';
@@ -143,23 +184,26 @@
                         // if (!devices.includes(parts[2]))
                         //     devices.push(parts[2]);
                     }
-                    var opt = document.createElement('option');
-                    opt.innerHTML = opt.value = '---';
-                    cmbSensors.appendChild(opt);
-                    for (const s of sensors) {
-                        opt = document.createElement('option');
-                        opt.innerHTML = opt.value = s;
-                        cmbSensors.appendChild(opt);
-                    }
+                    cmbSensors.appendChild(CreateOption('---', '---'));
+                    for (const s of sensors)
+                        cmbSensors.appendChild(CreateOption(s, s));
+                    cmbSensors.value = selectedSensor;
+                    CmbSensorsChange();
                 }
             };
+            selectedSensor = cmbSensors.value;
             var url = '/log?list=file&name=/' + cmbFolders.value + '/' + cmbFiles.value;
             xhttp.open('GET', url, true); xhttp.send();
         }
 
+        function ChkDisplayChartCheck(check) {
+            chkDisplayChart.checked = check;
+            chkDisplayChart.onchange();
+        }
+
         function CmbSensorsChange() {
             const sens = cmbSensors.value;
-            if (sens == '---')
+            if (sens == NO_VALUE)
                 DisplayText(fileContent);
             else {
                 var lines = [];
@@ -173,7 +217,22 @@
                 var xhttp = new XMLHttpRequest();
                 xhttp.onreadystatechange = function () {
                     if (this.readyState == 4 && this.status == 200) {
-                        spnSensorTypeComment.innerHTML = this.responseText;
+                        // e.g. Air quality: temp(C), hum(%), status, eqCO2(ppm), TVOC, AQI
+                        var s = this.responseText;
+                        spnSensorTypeComment.innerHTML = s;
+                        var parts = s.split(': ');
+                        if (parts.length == 2) {
+                            s = parts[1];
+                            parts = s.split(', ');
+                            cmbChartParams.innerHTML = '';
+                            cmbChartParams.appendChild(CreateOption(-1, '---'));
+                            var idx = 0;
+                            for (const p of parts)
+                                cmbChartParams.appendChild(CreateOption(idx++, p));
+                        }
+                        cmbChartParams.value = lastCharParam;
+                        ChkDisplayChartCheck(true);
+                        CmbChartParamsChange();
                     }
                 };
                 var url = '/sensorTypeComment?sensor=' + cmbSensors.value;
@@ -181,15 +240,50 @@
             }
         }
 
+        function CreateOption(val, text) {
+            var opt = document.createElement('option');
+            opt.value = val;
+            opt.innerHTML = text;
+            return opt;
+        }
+
+        function CmbChartParamsChange() {
+            const col = parseInt(cmbChartParams.value);
+            if (col == -1)
+                // tblChart.style.visibility = 'collapse';
+                // myChart.style.visibility = 'collapse';
+                // chkDisplayChart.checked = false;
+                ChkDisplayChartCheck(false);
+            else {
+                var xs = [];
+                var ys = [];
+                for (const line of txtFile.innerHTML.split(/\r?\n/)) {
+                    const parts = line.split(';');
+                    // 02:07:18;TestNodeMCU;26;34;1;927;712;4
+                    xs.push(parts[0]);
+                    ys.push(parts[2 + col]);
+                }
+                chart.data.labels = xs;
+                chart.data.datasets.forEach((dataset) => {
+                    dataset.data = ys;
+                });
+                chart.update();
+                lastCharParam = cmbChartParams.value;
+            }
+        }
+
+        var lastCharParam = NO_VALUE;
+
         function RefreshFile() {
-            if (cmbFolders.value == '---')
+            if (cmbFolders.value == NO_VALUE)
                 cmbFolders.focus();
-            else if (cmbFiles.value == '---')
+            else if (cmbFiles.value == NO_VALUE)
                 cmbFiles.focus();
             else {
                 CmbFilesChange();
-                if (cmbSensors.value == '---')
-                    CmbSensorsChange();
+                //?
+                // if (cmbSensors.value == NO_VALUE)
+                //     CmbSensorsChange();
             }
         }
 
@@ -209,6 +303,9 @@
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
                     // 0	Water detected	1	1
+                    let table = document.getElementById("tblNotifSetts");
+                    while (table.rows.length > 1) // Remove all rows except the first one
+                        table.deleteRow(1);
                     i = 1;
                     for (const line of this.responseText.trim().split(/\r?\n/)) {
                         const parts = line.split('\t');
@@ -237,41 +334,65 @@
             xhttp.open('GET', url, true); xhttp.send();
         }
 
+        function adjustChartWidth() {
+            tblChart.style.width = (window.innerWidth - 50) + 'px';
+            myChart.style.width = '100%';
+        }
+        window.addEventListener('resize', adjustChartWidth);
+
+        function setup() {
+            adjustChartWidth();
+            // TODO ukinuti ovo - chk treba da zadrzi startu vrednost posle ucitavanja
+            // chkDisplayChart.checked = false;
+            ChkDisplayChartCheck(false);
+            LoadNotifs();
+            TimeWatcherLoad();
+            LoadFolders();
+        }
+
+        window.addEventListener("pageshow", function (event) {
+            if (event.persisted) {
+                FetchNewData(); // Only fetch if restored from bfcache
+            }
+        });
     </script>
 </head>
 
-<body onload="LoadNotifs(); TimeWatcherLoad(); LoadFolders(); ">
+<body onload="setup();">
     <h1>Sensor Node</h1>
 
     <h2>Data in log files</h2>
 
-    <table style="width: 100%;">
-        <tr>
-            <td>Folder:</td>
-            <td>
-                <select id="cmbFolders" onchange="CmbFoldersChange();">
-                    <option>---</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>File:</td>
-            <td>
-                <select id="cmbFiles" onchange="CmbFilesChange()">
-                    <option>---</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>Sensor:</td>
-            <td>
-                <select id="cmbSensors" onchange="CmbSensorsChange()">
-                    <option>---</option>
-                </select>
-                <span id="spnSensorTypeComment" style="margin-left: 10px;"></span>
-            </td>
-        </tr>
-        <!-- <tr>
+    <div class="segment">
+        <table id="tblData" style="width: 100%;">
+            <tr>
+                <!-- <td style="width: 100px;">Folder:</td> -->
+                <td class="firstCol">Folder:</td>
+                <td>
+                    <select id="cmbFolders" onchange="CmbFoldersChange();">
+                        <option>---</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>File:</td>
+                <td>
+                    <select id="cmbFiles" onchange="CmbFilesChange()">
+                        <option>---</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td style="vertical-align: top;">Sensor:</td>
+                <td>
+                    <select id="cmbSensors" onchange="CmbSensorsChange()">
+                        <option>---</option>
+                        <option>test</option>
+                    </select>
+                    <span id="spnSensorTypeComment" style="margin-left: 10px;"></span>
+                </td>
+            </tr>
+            <!-- <tr>
             <td>Devices:</td>
             <td>
                 <select id="cmbDevices" onchange="">
@@ -279,53 +400,127 @@
                 </select>
             </td>
         </tr> -->
-        <tr>
-            <td style="vertical-align: top; width: 100px;">File Content:</td>
-            <td>
-                <textarea id="txtFile" rows="10" readonly
-                    style="font-family: 'Courier New', Courier, monospace; width: 100%;"></textarea>
-            </td>
-        </tr>
-        <tr>
-            <td></td>
-            <td><input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="RefreshFile()">
-            </td>
-        </tr>
-    </table>
+            <tr>
+                <!-- <td style="vertical-align: top; width: 100px;">File Content:</td> -->
+                <td colspan="2">
+                    <textarea id="txtFile" rows="10" readonly
+                        style="font-family: 'Courier New', Courier, monospace; width: 100%;"></textarea>
+                    <input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="RefreshFile()">
+                </td>
+            </tr>
+        </table>
+
+        <div id="divChart">
+            <input type="checkbox" id="chkDisplayChart" checked
+                onchange="tblChart.style.visibility = this.checked ? 'visible' : 'collapse';" />
+            <label for="chkDisplayChart">Display Chart</label>
+            <table id="tblChart">
+                <tr>
+                    <td class="firstCol">Parameter:</td>
+                    <td>
+                        <select id="cmbChartParams" onchange="CmbChartParamsChange()">
+                            <option>---</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <canvas id="myChart" style="height:300px; max-height: 300px;"></canvas>
+                        <script>
+                            var xValues = []; // '01:36:22', '01:39:22', '01:55:35'
+                            const yValues = []; // 1, 4, 9
+                            var chart = new Chart("myChart", {
+                                type: "line",
+                                data: {
+                                    labels: xValues,
+                                    datasets: [{
+                                        fill: false,
+                                        lineTension: 0,
+                                        backgroundColor: "rgba(0,0,255,1.0)",
+                                        borderColor: "rgba(0,0,255,0.1)",
+                                        data: yValues
+                                    }]
+                                },
+                                options: {
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        x: {
+                                            type: 'time',
+                                            time: {
+                                                unit: 'hour',
+                                                displayFormats: {
+                                                    hour: 'HH:mm'  // 'HH' ?
+                                                }
+                                            },
+                                            ticks: {
+                                                // stepSize: 5 // Show label every 5 minutes                                            }
+                                                // autoSkip: true,
+                                                // maxTicksLimit: 10 // Show a maximum of 6 labels
+                                                source: 'auto', // Let Chart.js position the ticks
+                                                stepSize: 1      // Ensure only full hours are shown
+                                            }
+                                        },
+                                        y: { min: 0 }
+                                    }
+                                }
+                            });
+                        </script>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
 
     <h2>Notification Settings</h2>
-    <table id="tblNotifSetts">
-        <tr>
-            <th>Event</th>
-            <th>Buzz</th>
-            <th>WA msg</th>
-        </tr>
-    </table>
+    <div class="segment">
+        <table id="tblNotifSetts">
+            <tr>
+                <th>Event</th>
+                <th>Buzz</th>
+                <th>WA msg</th>
+            </tr>
+        </table>
+    </div>
 
     <h2>Links</h2>
-    <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">IQ Air - Banovo Brdo</a> <br>
-    <a href="https://www.google.com/search?q=vreme+banovo+brdo">Weather - Banovo Brdo</a> <br>
+    <div class="segment">
+        <img src="img/iq_air_16.png" class="linkIcon" />
+        <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">IQ Air - Banovo Brdo</a> <br>
+        <img src="img/rhmz.ico" class="linkIcon" />
+        <a href="https://www.hidmet.gov.rs/latin/prognoza/stanica.php?mp_id=13274&nor=da">RHMZ - Beograd, 5 dana</a>
+        <br>
+        <img src="img/google_16.png" class="linkIcon" />
+        <a href="https://www.google.com/search?q=vreme+banovo+brdo">Weather - Banovo Brdo</a> <br>
+        <img src="img/google_16.png" class="linkIcon" />
+        <a href="https://www.google.com/search?q=vreme+umka">Weather - Umka</a> <br>
+        <img src="img/google_16.png" class="linkIcon" />
+        <a href="https://www.google.com/search?q=vreme+vranić">Weather - Vranić</a> <br>
+    </div>
 
     <div style="margin: 20px 0;">
         <h2 style="display: inline; margin-right: 20px;">Status Info</h2>
         <button onclick="StatusInfo()" title="Refresh status info">🔄</button>
         <button onclick="spnStatusInfo.innerHTML = ''" title="Clear status info">❌</button>
     </div>
-    <span id="spnStatusInfo"></span>
+    <div class="segment">
+        <span id="spnStatusInfo"></span>
+    </div>
 
     <h2>Time Watcher</h2>
 
-    <input type="checkbox" id="chkIsItOn" onchange="TimeWatcherChange()" />
-    <label for="chkIsItOn">Is it ON</label>
-    <br />
-    <label for="selBuzzMin">Buzz on </label>
-    <select id="selBuzzMin" onchange="TimeWatcherChange()">
-        <option value="5">5</option>
-        <option value="10">10</option>
-        <option value="30">30</option>
-        <option value="60">60</option>
-    </select>
-    minutes
+    <div class="segment">
+        <input type="checkbox" id="chkIsItOn" onchange="TimeWatcherChange(this)" />
+        <label for="chkIsItOn">Is it ON</label>
+        <br />
+        <label for="selBuzzMin">Buzz on </label>
+        <select id="selBuzzMin" onchange="TimeWatcherChange(this)">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="30">30</option>
+            <option value="60">60</option>
+        </select>
+        minutes
+    </div>
 </body>
 
 </html>

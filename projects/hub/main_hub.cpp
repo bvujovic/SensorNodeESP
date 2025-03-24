@@ -48,8 +48,16 @@ void startWebServer()
 {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *req)
               { req->send(LittleFS, "/ws/index.html", "text/html"); });
-    server.on("/nodes.png", HTTP_GET, [](AsyncWebServerRequest *req)
-              { req->send(LittleFS, "/ws/nodes.png", "image/png"); });
+    server.on("/img/nodes.png", HTTP_GET, [](AsyncWebServerRequest *req)
+              { req->send(LittleFS, "/ws/img/nodes.png", "image/png"); });
+    server.on("/img/google_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
+              { req->send(LittleFS, "/ws/img/google_16.png", "image/png"); });
+    server.on("/img/iq_air_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
+              { req->send(LittleFS, "/ws/img/iq_air_16.png", "image/png"); });
+    // server.on("/img/rhmz.ico", HTTP_GET, [](AsyncWebServerRequest *req)
+    //           { req->send(LittleFS, "/ws/img/rhmz.ico", "image/png"); });
+    server.on("/img/rhmz.ico", HTTP_GET, [](AsyncWebServerRequest *req)
+              { req->send(LittleFS, "/ws/img/rhmz.ico", "image/x-icon"); });
 
     server.on("/log", HTTP_GET, [](AsyncWebServerRequest *req)
               {
@@ -144,7 +152,7 @@ void setup()
     Serial.println(" connected.");
     Serial.print("ESP32 Web Server's IP address: ");
     Serial.println(WiFi.localIP());
-    configTime(3600, 3600, "rs.pool.ntp.org");
+    configTime(3600, 0, "rs.pool.ntp.org");
 
     startWebServer();
 
@@ -167,17 +175,22 @@ void loop()
     if (cmd != None)
     {
         Serial.printf("SRX882: %d\n", cmd);
-        if (notifications[WaterDetected].wa_msg)
+        Notification *notif = GetNotif(WaterDetected);
+        if (notif != NULL)
         {
-            wifiConfig(false);
-            delay(3000);
-            // 💥Stan, kuhinja, sudopera:
-            // VISOK NIVO VODE U SUDOPERI 💦
-            NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
-            wifiConfig(true);
+            if (notif->wa_msg)
+            {
+                wifiConfig(false);
+                delay(3000);
+                // 💥Stan, kuhinja, sudopera:
+                // VISOK NIVO VODE U SUDOPERI 💦
+                NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
+                wifiConfig(true);
+            }
+            // if (notifications[WaterDetected].buzz)
+            if (notif->buzz)
+                buzzer.blinkCritical();
         }
-        if (notifications[WaterDetected].buzz)
-            buzzer.blinkCritical();
         logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
     }
     // ESP-NOW: reply to "millis" command
