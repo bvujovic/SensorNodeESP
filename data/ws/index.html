@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0"> -->
+    <meta http-equiv="Expires" content="0">
     <title>Sensor Node</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
@@ -54,6 +54,20 @@
             /* width: 50%; */
             margin-right: 20px;
             /* max-width: none; */
+            overflow: hidden;
+            /* Prevents content from expanding beyond */
+            max-width: 100%;
+            /* Ensures the table doesn’t get too wide */
+        }
+
+        #myChart {
+            max-height: 300px;
+            display: block;
+            /* Prevents inline whitespace issues */
+            max-width: 100%;
+            /* Ensures the chart does not overflow */
+            height: auto; 
+            /* Maintain aspect ratio */
         }
 
         .linkIcon {
@@ -65,7 +79,7 @@
         function CmbFileNameChange() {
             txtContent.value = '';
             const fileName = cmbFileName.value;
-            if (fileName == '---') {
+            if (fileName == NOTHING) {
                 Loading(false);
                 return;
             }
@@ -140,7 +154,7 @@
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
                     cmbFiles.innerHTML = '';
-                    cmbFiles.appendChild(CreateOption(NO_VALUE, NO_VALUE));
+                    cmbFiles.appendChild(CreateOption(NOTHING, NOTHING));
                     for (const line of this.responseText.split(/\r?\n/)) {
                         if (line.trim().length == 0)
                             continue;
@@ -161,12 +175,12 @@
             spnSensorTypeComment.innerHTML = '';
         }
 
-        const NO_VALUE = '---';
-        var selectedSensor = NO_VALUE;
+        const NOTHING = '---';
+        var selectedSensor = NOTHING;
         var fileContent;
 
         function CmbFilesChange() {
-            if (cmbFiles.value == '---') {
+            if (cmbFiles.value == NOTHING) {
                 txtFile.innerHTML = '';
                 return;
             }
@@ -184,7 +198,7 @@
                         // if (!devices.includes(parts[2]))
                         //     devices.push(parts[2]);
                     }
-                    cmbSensors.appendChild(CreateOption('---', '---'));
+                    cmbSensors.appendChild(CreateOption(NOTHING, NOTHING));
                     for (const s of sensors)
                         cmbSensors.appendChild(CreateOption(s, s));
                     cmbSensors.value = selectedSensor;
@@ -203,7 +217,7 @@
 
         function CmbSensorsChange() {
             const sens = cmbSensors.value;
-            if (sens == NO_VALUE)
+            if (sens == NOTHING)
                 DisplayText(fileContent);
             else {
                 var lines = [];
@@ -225,10 +239,15 @@
                             s = parts[1];
                             parts = s.split(', ');
                             cmbChartParams.innerHTML = '';
-                            cmbChartParams.appendChild(CreateOption(-1, '---'));
+                            cmbChartParams.appendChild(CreateOption(-1, NOTHING));
                             var idx = 0;
                             for (const p of parts)
                                 cmbChartParams.appendChild(CreateOption(idx++, p));
+                        }
+                        //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
+                        if (lastCharParam == -1) {
+                            if (cmbSensors.value == 'EnsAht')
+                                lastCharParam = 3; // eqCO2 (ppm)
                         }
                         cmbChartParams.value = lastCharParam;
                         ChkDisplayChartCheck(true);
@@ -250,9 +269,6 @@
         function CmbChartParamsChange() {
             const col = parseInt(cmbChartParams.value);
             if (col == -1)
-                // tblChart.style.visibility = 'collapse';
-                // myChart.style.visibility = 'collapse';
-                // chkDisplayChart.checked = false;
                 ChkDisplayChartCheck(false);
             else {
                 var xs = [];
@@ -264,27 +280,25 @@
                     ys.push(parts[2 + col]);
                 }
                 chart.data.labels = xs;
-                chart.data.datasets.forEach((dataset) => {
-                    dataset.data = ys;
+                chart.data.datasets.forEach((ds) => {
+                    ds.data = ys;
                 });
                 chart.update();
                 lastCharParam = cmbChartParams.value;
+                if (lastCharParam != -1 && lastCharParam != '')
+                    spnLastValues.innerHTML = 'Last values: ' + ys.slice(-4).join(", ");
             }
         }
 
-        var lastCharParam = NO_VALUE;
+        var lastCharParam = -1;
 
         function RefreshFile() {
-            if (cmbFolders.value == NO_VALUE)
+            if (cmbFolders.value == NOTHING)
                 cmbFolders.focus();
-            else if (cmbFiles.value == NO_VALUE)
+            else if (cmbFiles.value == NOTHING)
                 cmbFiles.focus();
-            else {
+            else
                 CmbFilesChange();
-                //?
-                // if (cmbSensors.value == NO_VALUE)
-                //     CmbSensorsChange();
-            }
         }
 
         function StatusInfo() {
@@ -335,8 +349,14 @@
         }
 
         function adjustChartWidth() {
-            tblChart.style.width = (window.innerWidth - 50) + 'px';
-            myChart.style.width = '100%';
+            // alert(window.innerWidth);
+            // tblChart.style.width = (window.innerWidth - 50) + 'px';
+            // myChart.style.width = '100%';
+            // alert(window.innerWidth + ", " + tblChart.style.width + ", " + myChart.style.width);
+            let width = window.innerWidth - 50;
+            tblChart.style.width = width + 'px';  // Set table width
+            myChart.style.width = width + 'px';   // Match canvas width
+            myChart.width = width;  // Explicitly set the canvas width to match
         }
         window.addEventListener('resize', adjustChartWidth);
 
@@ -421,11 +441,13 @@
                         <select id="cmbChartParams" onchange="CmbChartParamsChange()">
                             <option>---</option>
                         </select>
+                        &nbsp;
+                        <span id="spnLastValues"></span>
                     </td>
                 </tr>
                 <tr>
                     <td colspan="2">
-                        <canvas id="myChart" style="height:300px; max-height: 300px;"></canvas>
+                        <canvas id="myChart"></canvas>
                         <script>
                             var xValues = []; // '01:36:22', '01:39:22', '01:55:35'
                             const yValues = []; // 1, 4, 9

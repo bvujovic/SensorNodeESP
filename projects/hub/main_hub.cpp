@@ -54,8 +54,6 @@ void startWebServer()
               { req->send(LittleFS, "/ws/img/google_16.png", "image/png"); });
     server.on("/img/iq_air_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
               { req->send(LittleFS, "/ws/img/iq_air_16.png", "image/png"); });
-    // server.on("/img/rhmz.ico", HTTP_GET, [](AsyncWebServerRequest *req)
-    //           { req->send(LittleFS, "/ws/img/rhmz.ico", "image/png"); });
     server.on("/img/rhmz.ico", HTTP_GET, [](AsyncWebServerRequest *req)
               { req->send(LittleFS, "/ws/img/rhmz.ico", "image/x-icon"); });
 
