@@ -18,7 +18,9 @@ enum SensorType
     /// @brief Simple notfication without any additional data
     SimpleEvent,
     /// @brief Data from ENS160+AHT21 module: temp, hum, ECO2, AQI...
-    EnsAht
+    EnsAht,
+    /// @brief Data from BMP280 sensor: temperature
+    Temperature
 };
 
 enum Device

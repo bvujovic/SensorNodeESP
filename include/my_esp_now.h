@@ -7,12 +7,14 @@ const char *StrSensorTypes[] = {
     "Undefined",
     "SimpleEvent",
     "EnsAht",
+    "Temp",
 };
 
 const char *SensorTypesComment[] = {
     "/",
     "Logged event without additional data",
     "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
+    "Temperature: temp (C)",
 };
 
 const char *StrDevices[] = {
@@ -87,7 +89,7 @@ void setPeers()
     // uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
     // esp_now_add_peer(mac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::EnsAht, Device::TestNodeMCU);
-    setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::EnsAht, Device::WemosExtAnt);
+    setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::Temperature, Device::WemosExtAnt);
     // memcpy(peers[3].peer_addr, macEsp32C3, 6);
 
     addPeers();
@@ -161,6 +163,15 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
                 buzzer.blinkWarning();
             if (GetNotif(AQI5)->buzz && ad.AQI == 5)
                 buzzer.blinkCritical();
+            logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
+        }
+        if (p->type == SensorType::Temperature)
+        {
+            float temp;
+            memcpy(&temp, incomingData, len);
+            sprintf(line, "%.2f", temp);
+            // Serial.println(len);
+            // Serial.println(temp);
             logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
         }
     }

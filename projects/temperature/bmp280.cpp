@@ -19,9 +19,8 @@ void ledOn_10sec()
 }
 
 #define USE_ESP_NOW
-#include "MacAddresses.h"
-
 #ifdef USE_ESP_NOW
+#include "MacAddresses.h"
 #ifdef ESP32
 #include <esp_now.h>
 #include <WiFi.h>
@@ -43,7 +42,7 @@ uint8_t *mac = macSoftEsp32BattConn;
 void setup()
 {
     Serial.begin(115200);
-    Serial.println("\nBMP280 test");
+    // Serial.println("\nBMP280 test");
     pinMode(pinLed, OUTPUT);
     ledOn(false);
 
@@ -95,10 +94,6 @@ void setup()
 
 void loop()
 {
-    // Serial.print("Temperature = ");
-    // Serial.print(bmp.readTemperature());
-    // Serial.println(" *C");
-
     auto t = bmp.readTemperature();
     Serial.println(t);
 #ifdef USE_ESP_NOW
@@ -106,11 +101,12 @@ void loop()
     printf("Send res: 0x%X\n", res);
     if (res != 0)
         ledOn_10sec();
-    ESP.deepSleep(10 * (MIN + SEC) * 1000);
+    ESP.deepSleep((10 * MIN + 9.58 * SEC) * 1000);
+    // 10   2+
+    // 9.5  6-
 #else
     ESP.deepSleep(10 * SEC * 1000);
 #endif
-
 
     // Serial.print("Pressure = ");
     // Serial.print(bmp.readPressure());
@@ -119,5 +115,5 @@ void loop()
     // Serial.print(bmp.readAltitude(1013.25)); // this should be adjusted to your local forcase
     // Serial.println(" m");
     // Serial.println();
-    delay(10000);
+    // delay(10000);
 }

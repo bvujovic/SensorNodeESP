@@ -66,7 +66,7 @@
             /* Prevents inline whitespace issues */
             max-width: 100%;
             /* Ensures the chart does not overflow */
-            height: auto; 
+            height: auto;
             /* Maintain aspect ratio */
         }
 
@@ -169,6 +169,29 @@
             xhttp.open('GET', url, true); xhttp.send();
         }
 
+        // Take log entries from last n (e.g. 8) hours.
+        function TakeLastEntries(content) {
+            const n = 8;
+            const lines = content.trim().split(/\r?\n/);
+            const lastLine = lines[lines.length - 1].trim();
+            const hourStr = lastLine.substring(0, 2);
+            let hour = parseInt(hourStr, 10);
+            if (hour - n < 0)
+                fileContent = content;
+            else {
+                const validHours = [];
+                for (let i = 0; i < n; i++) {
+                    let h = hour - i;
+                    validHours.push(h.toString().padStart(2, '0'));
+                }
+                const filteredLines = lines.filter(line => {
+                    const hourPart = line.substring(0, 2);
+                    return validHours.includes(hourPart);
+                });
+                fileContent = filteredLines.join('\n');
+            }
+        }
+
         function DisplayText(content) {
             txtFile.innerHTML = content;
             txtFile.scrollTop = txtFile.scrollHeight;
@@ -187,7 +210,8 @@
             var xhttp = new XMLHttpRequest();
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
-                    DisplayText(fileContent = this.responseText.trim());
+                    TakeLastEntries(this.responseText.trim());
+                    DisplayText(fileContent);
                     cmbSensors.innerHTML = '';
                     var sensors = [];
                     // var devices = [];
@@ -226,8 +250,8 @@
                     if (parts[1] == sens) {
                         lines.push(parts[0] + ";" + parts[2] + ";" + parts[3]);
                     }
-                    DisplayText(lines.join('\n'));
                 }
+                DisplayText(lines.join('\n'));
                 var xhttp = new XMLHttpRequest();
                 xhttp.onreadystatechange = function () {
                     if (this.readyState == 4 && this.status == 200) {
@@ -244,12 +268,7 @@
                             for (const p of parts)
                                 cmbChartParams.appendChild(CreateOption(idx++, p));
                         }
-                        //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
-                        if (lastCharParam == -1) {
-                            if (cmbSensors.value == 'EnsAht')
-                                lastCharParam = 3; // eqCO2 (ppm)
-                        }
-                        cmbChartParams.value = lastCharParam;
+                        cmbChartParams.value = lastChartParam[cmbSensors.value];
                         ChkDisplayChartCheck(true);
                         CmbChartParamsChange();
                     }
@@ -283,14 +302,24 @@
                 chart.data.datasets.forEach((ds) => {
                     ds.data = ys;
                 });
+                if (cmbSensors.value == 'Temp') {
+                    const minValue = Math.min(...xs) - 1;
+                    chart.options.scales.y.min = minValue;
+                }
+                else
+                    chart.options.scales.y.min = 0;
                 chart.update();
-                lastCharParam = cmbChartParams.value;
-                if (lastCharParam != -1 && lastCharParam != '')
+                // lastCharParam = cmbChartParams.value;
+                const l = lastChartParam[cmbSensors.value] = cmbChartParams.value;
+                // if (lastCharParam != -1 && lastCharParam != '')
+                if (l != -1 && l != '')
                     spnLastValues.innerHTML = 'Last values: ' + ys.slice(-4).join(", ");
             }
         }
 
-        var lastCharParam = -1;
+        //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
+        //* default parameters: TVOC, temp
+        const lastChartParam = { EnsAht: 4, Temp: 0 };
 
         function RefreshFile() {
             if (cmbFolders.value == NOTHING)
@@ -485,7 +514,7 @@
                                         y: { min: 0 }
                                     }
                                 }
-                            });
+                            });                          
                         </script>
                     </td>
                 </tr>

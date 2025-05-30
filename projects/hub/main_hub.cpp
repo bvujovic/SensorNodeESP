@@ -138,7 +138,8 @@ void setup()
     tw.setBlinky(buzzer.getBlinky());
 
     // WiFi
-    WiFi.mode(WIFI_AP_STA);
+    //! WiFi.mode(WIFI_AP_STA);
+    WiFi.mode(WIFI_STA);
     //? WiFi.persistent(false);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
     Serial.print("Connecting to WiFi");
@@ -150,7 +151,8 @@ void setup()
     Serial.println(" connected.");
     Serial.print("ESP32 Web Server's IP address: ");
     Serial.println(WiFi.localIP());
-    configTime(3600, 0, "rs.pool.ntp.org");
+    configTime(3600, 3600, "rs.pool.ntp.org");
+    // configTime("CET-1CEST,M3.last.0/2,M10.last.0/3", "rs.pool.ntp.org");
 
     startWebServer();
 
