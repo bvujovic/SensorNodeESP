@@ -5,8 +5,11 @@
 /// @brief
 struct AirData
 {
+    // /// @brief Temperature in Celzius.
+    // int8_t temperature;
+    
     /// @brief Temperature in Celzius.
-    int8_t temperature;
+    float temperature;
     /// @brief Relative humidity.
     uint8_t humidity;
     /// @brief 0-Normal operation, 1-Warm-Up phase, first 3 minutes after power-on.

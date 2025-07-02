@@ -8,6 +8,7 @@ const char *StrSensorTypes[] = {
     "SimpleEvent",
     "EnsAht",
     "Temp",
+    "EnsDht",
 };
 
 const char *SensorTypesComment[] = {
@@ -15,12 +16,14 @@ const char *SensorTypesComment[] = {
     "Logged event without additional data",
     "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
     "Temperature: temp (C)",
+    "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
 };
 
 const char *StrDevices[] = {
     "Undefined",
     "TestNodeMCU",
     "WemosExtAnt",
+    "ESP8266 Wemos 01",
 };
 
 struct Notification
@@ -62,7 +65,7 @@ struct peer_info
     Device device;
 };
 
-peer_info peers[2];               // ESP-NOW peers
+peer_info peers[1];               // ESP-NOW peers
 int cntPeers;                     // peers count
 int lenMillisCommand;             // length of (string) "millis" command
 peer_info *peerRespMillis = NULL; // send millis to this peer
@@ -88,8 +91,7 @@ void setPeers()
     //* WiFi.softAPmacAddress is created from WiFi.macAddress by adding 1 to the last byte
     // uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
     // esp_now_add_peer(mac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
-    setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::EnsAht, Device::TestNodeMCU);
-    setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::Temperature, Device::WemosExtAnt);
+    setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
     // memcpy(peers[3].peer_addr, macEsp32C3, 6);
 
     addPeers();
@@ -151,11 +153,11 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         if (len == lenMillisCommand && strncmp((const char *)incomingData, "millis", lenMillisCommand) == 0)
             peerRespMillis = p;
 
-        if (p->type == SensorType::EnsAht)
+        if (p->type == SensorType::EnsDht)
         {
             AirData ad;
             memcpy(&ad, incomingData, len);
-            sprintf(line, "%d;%u;%u;%u;%u;%u", ad.temperature, ad.humidity, ad.status, ad.ECO2, ad.TVOC, ad.AQI);
+            sprintf(line, "%.1f;%u;%u;%u;%u;%u", ad.temperature, ad.humidity, ad.status, ad.ECO2, ad.TVOC, ad.AQI);
             Serial.println(line);
             if (GetNotif(ECO2_1000)->buzz && ad.ECO2 >= 1000)
                 buzzer.blinkWarning();
@@ -176,5 +178,8 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         }
     }
     else
+    {
         Serial.println("ESP-NOW peer unknown.");
+        printMAC(mac);
+    }
 }

@@ -21,6 +21,9 @@ MyBlinky buzzer(18);
 
 char line[80]; // general purpose char array - formating data
 #include "my_esp_now.h"
+extern "C" {
+  #include "lwip/apps/sntp.h"
+}
 #include "time.h"
 struct tm ti;
 ulong msLastGetTime = 0;
@@ -128,6 +131,11 @@ void startWebServer()
     server.begin();
 }
 
+void timeSyncCallback(struct timeval *tv)
+{
+    Serial.println("Time synchronized via NTP.");
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -138,8 +146,7 @@ void setup()
     tw.setBlinky(buzzer.getBlinky());
 
     // WiFi
-    //! WiFi.mode(WIFI_AP_STA);
-    WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_AP_STA); // ESP32 has to be in this mode to be able to use ESP-NOW and Web Server at the same time
     //? WiFi.persistent(false);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
     Serial.print("Connecting to WiFi");
@@ -151,6 +158,8 @@ void setup()
     Serial.println(" connected.");
     Serial.print("ESP32 Web Server's IP address: ");
     Serial.println(WiFi.localIP());
+    sntp_set_sync_interval(86400000);  // once per day
+    sntp_set_time_sync_notification_cb(timeSyncCallback);
     configTime(3600, 3600, "rs.pool.ntp.org");
     // configTime("CET-1CEST,M3.last.0/2,M10.last.0/3", "rs.pool.ntp.org");
 

@@ -302,12 +302,19 @@
                 chart.data.datasets.forEach((ds) => {
                     ds.data = ys;
                 });
-                if (cmbSensors.value == 'Temp') {
-                    const minValue = Math.min(...xs) - 1;
-                    chart.options.scales.y.min = minValue;
+                chart.options.scales.y.min = 0;
+                chart.options.scales.y.ticks.stepSize = undefined;
+                if (cmbSensors.value == 'EnsDht') {
+                    if (cmbChartParams.value == 0) { // EnsDht temp
+                        // const validYs = ys.filter(v => !isNaN(v));
+                        // chart.options.scales.y.min = Math.min(...validYs) - 1;
+                        chart.options.scales.y.min = 'auto';
+                        chart.options.scales.y.ticks.stepSize = 0.5; 
+                    }
+                    if (cmbChartParams.value == 1) { // EnsDht hum
+                        chart.options.scales.y.min = 'auto'; // Let Chart.js determine the min value
+                    }
                 }
-                else
-                    chart.options.scales.y.min = 0;
                 chart.update();
                 // lastCharParam = cmbChartParams.value;
                 const l = lastChartParam[cmbSensors.value] = cmbChartParams.value;
@@ -319,7 +326,7 @@
 
         //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
         //* default parameters: TVOC, temp
-        const lastChartParam = { EnsAht: 4, Temp: 0 };
+        const lastChartParam = { EnsAht: 4, Temp: 0, EnsDht: 4 };
 
         function RefreshFile() {
             if (cmbFolders.value == NOTHING)

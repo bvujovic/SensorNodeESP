@@ -20,7 +20,9 @@ enum SensorType
     /// @brief Data from ENS160+AHT21 module: temp, hum, ECO2, AQI...
     EnsAht,
     /// @brief Data from BMP280 sensor: temperature
-    Temperature
+    Temperature,
+    /// @brief Data from ENS160 & DHT22 module: temp, hum, ECO2, AQI...
+    EnsDht,
 };
 
 enum Device
@@ -28,6 +30,7 @@ enum Device
     UndefinedDevice,
     TestNodeMCU,
     WemosExtAnt,
+    Wemos1,
 };
 
 /// @brief Depending on event type hub will handle data differently: log data, send WA notification, buzz...

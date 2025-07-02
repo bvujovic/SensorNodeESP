@@ -10,23 +10,26 @@ DHT dht(DHTPIN, DHTTYPE);
 #define I2C_COMMUNICATION
 DFRobot_ENS160_I2C ens(&Wire, /*I2CAddr*/ 0x53);
 
-//TODO redefinisati AirData tako da temp i hum budu float. Napraviti izmene i kod HUB-a.
 #include "AirData.h"
 AirData airData;
 
 #define SEC (1000)
 #define MIN (60 * SEC)
 
+const byte maxRetries = 3; // Max retries for getting data from sensors
+byte cntRetries = 0;       // Counter for retries
+bool shouldRetry = false;  // Flag to indicate if we should retry reading sensors
+
 const byte pinLed = LED_BUILTIN;
 void ledOn(bool on) { digitalWrite(pinLed, !on); }
-void ledOn_10sec()
+void ledOnDelay(int secs)
 {
     ledOn(true);
-    delay(10 * SEC);
+    delay(secs * SEC);
     ledOn(false);
 }
 
-// #define USE_ESP_NOW
+#define USE_ESP_NOW
 #ifdef USE_ESP_NOW
 #include "MacAddresses.h"
 #ifdef ESP32
@@ -74,7 +77,7 @@ void setup()
         Serial.println("Communication with ENS160 device failed, please check connection");
         // ledOn(true);
         // delay(10 * SEC);
-        ledOn_10sec();
+        ledOnDelay(10);
     }
     // ledOn(false);
     Serial.println("ENS160 found");
@@ -89,8 +92,15 @@ void setup()
         // ledOn(true);
         // while (true)
         //     delay(100);
-        ledOn_10sec();
+        ledOnDelay(10);
     }
+    // if (esp_now_init() != 0)
+    // {
+    //     Serial.println("ESP NOW INIT FAIL");
+    //     // ledOn_10sec();
+    //     cntRetries++;
+    // }
+
 #ifdef ESP32
     // esp_now_register_send_cb(OnDataSent);
     memcpy(peerInfo.peer_addr, mac, 6);
@@ -110,53 +120,77 @@ void setup()
     auto res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
     printf("esp_now_add_peer res: 0x%X\n", res);
     if (res != 0)
-        ledOn_10sec();
+        ledOnDelay(10);
+    // cntRetries++;
 #endif
 #endif
-    // DHT22
-    float hum = dht.readHumidity();
-    float temp = dht.readTemperature(); // Read temperature as Celsius and apply offset
-    if (isnan(hum) || isnan(temp))
+    do
     {
-        Serial.println("Failed to read from DHT sensor!");
-        ens.setTempAndHum(25.0, 50.0); // Set default temperature and humidity
-        airData.temperature = 0;
-        airData.humidity = 0;
-    }
-    airData.temperature = (int)(temp + 0.5); // Round to nearest integer
-    airData.humidity = (int)(hum + 0.5);     // Round to nearest integer
-    Serial.print("Temp: ");
-    Serial.print(airData.temperature);
-    Serial.print(", Hum: ");
-    Serial.print(airData.humidity);
-    Serial.println("% rH");
+        // DHT22
+        float hum = dht.readHumidity();
+        float temp = dht.readTemperature();
+        if (isnan(hum) || isnan(temp))
+        {
+            Serial.println("Failed to read from DHT sensor!");
+            ens.setTempAndHum(25.0, 50.0); // Set default temperature and humidity
+            airData.temperature = 0;
+            airData.humidity = 0;
+            shouldRetry = true;
+        }
+        if (hum > 100)
+            shouldRetry = true;
+        airData.temperature = temp;
+        airData.humidity = (int)(hum + 0.5); // Round to nearest integer
+        Serial.print("Temp: ");
+        Serial.print(airData.temperature);
+        Serial.print(", Hum: ");
+        Serial.print(airData.humidity);
+        Serial.println("% rH");
 
-    ens.setTempAndHum(temp, hum); // Set temperature and humidity for ENS160
-    // ENS160
-    airData.status = ens.getENS160Status();
-    airData.AQI = ens.getAQI();
-    airData.TVOC = ens.getTVOC();
-    airData.ECO2 = ens.getECO2();
-    Serial.print("ENS160 status: ");
-    Serial.print(airData.status);
-    Serial.print(",  CO2 equivalent: ");
-    Serial.print(airData.ECO2);
-    Serial.print(" ppm, TVOC: ");
-    Serial.print(airData.TVOC);
-    Serial.print(", AQI: ");
-    Serial.println(airData.AQI);
+        ens.setTempAndHum(temp, hum); // Set temperature and humidity for ENS160
+        // ENS160
+        airData.status = ens.getENS160Status();
+        airData.AQI = ens.getAQI();
+        airData.TVOC = ens.getTVOC();
+        airData.ECO2 = ens.getECO2();
+        Serial.print("ENS160 status: ");
+        Serial.print(airData.status);
+        Serial.print(",  CO2 equivalent: ");
+        Serial.print(airData.ECO2);
+        Serial.print(" ppm, TVOC: ");
+        Serial.print(airData.TVOC);
+        Serial.print(", AQI: ");
+        Serial.println(airData.AQI);
+        if (airData.AQI == 0 || airData.status == 1)
+            shouldRetry = true;
+        if (shouldRetry)
+        {
+            cntRetries++;
+            Serial.printf("Retrying... (%d/%d)\n", cntRetries, maxRetries);
+            ledOnDelay(10);
+            if (airData.status == 1)
+                ledOnDelay(60); // If in warm-up phase, wait longer
+        }
+        // else
+        //     cntRetries = 0;
+    } while (shouldRetry && cntRetries < maxRetries);
+
+#ifdef USE_ESP_NOW
+    if (cntRetries < maxRetries)
+    {
+        Serial.println("Sending data via ESP-NOW");
+        res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+        printf("Send res: 0x%X\n", res);
+        if (res != 0)
+            ledOnDelay(10);
+    }
+    // ESP.deepSleep(10 * (MIN + SEC) * 1000);
+    ESP.deepSleep((10 * (MIN + SEC) - 0.8 * SEC) * 1000);
+#else
+    ESP.deepSleep(10 * SEC * 1000);
+#endif
 }
 
 void loop()
 {
-    //TODO mozda bi bolje bilo da ovaj deo koda stavim u setup() i da ne ide u loop()
-#ifdef USE_ESP_NOW
-    auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
-    printf("Send res: 0x%X\n", res);
-    if (res != 0)
-        ledOn_10sec();
-    ESP.deepSleep(10 * (MIN + SEC) * 1000);
-#else
-    ESP.deepSleep(10 * SEC * 1000);
-#endif
 }
