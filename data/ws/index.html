@@ -225,6 +225,10 @@
                     cmbSensors.appendChild(CreateOption(NOTHING, NOTHING));
                     for (const s of sensors)
                         cmbSensors.appendChild(CreateOption(s, s));
+                    // if (selectedSensor == NOTHING && sensors.includes('EnsDht'))
+                    //     selectedSensor = 'EnsDht';
+                    if (selectedSensor == NOTHING && sensors.includes('BME680'))
+                        selectedSensor = 'BME680';
                     cmbSensors.value = selectedSensor;
                     CmbSensorsChange();
                 }
@@ -304,14 +308,14 @@
                 });
                 chart.options.scales.y.min = 0;
                 chart.options.scales.y.ticks.stepSize = undefined;
-                if (cmbSensors.value == 'EnsDht') {
-                    if (cmbChartParams.value == 0) { // EnsDht temp
+                if (cmbSensors.value == 'EnsDht' || cmbSensors.value == 'BME680') {
+                    if (cmbChartParams.value == 0) { // temp
                         // const validYs = ys.filter(v => !isNaN(v));
                         // chart.options.scales.y.min = Math.min(...validYs) - 1;
                         chart.options.scales.y.min = 'auto';
-                        chart.options.scales.y.ticks.stepSize = 0.5; 
+                        chart.options.scales.y.ticks.stepSize = 0.5;
                     }
-                    if (cmbChartParams.value == 1) { // EnsDht hum
+                    if (cmbChartParams.value == 1) { // hum
                         chart.options.scales.y.min = 'auto'; // Let Chart.js determine the min value
                     }
                 }
@@ -326,7 +330,7 @@
 
         //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
         //* default parameters: TVOC, temp
-        const lastChartParam = { EnsAht: 4, Temp: 0, EnsDht: 4 };
+        const lastChartParam = { EnsAht: 4, Temp: 0, EnsDht: 4, BME680: 4 };
 
         function RefreshFile() {
             if (cmbFolders.value == NOTHING)
@@ -384,6 +388,28 @@
             xhttp.open('GET', url, true); xhttp.send();
         }
 
+        function RemoveFolder() {
+            if (cmbFolders.value == NOTHING) {
+                alert("No folder selected");
+                return;
+            }
+            if (!confirm("Are you sure you want to remove folder '" + cmbFolders.value + "' and all its log files?"))
+                return;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    if (this.responseText == "1") {
+                        alert("Folder removed. Please refresh the page.");
+                        LoadFolders();
+                    }
+                    else
+                        alert("Error removing folder");
+                }
+            };
+            var url = '/removeDir?dir=/' + cmbFolders.value;
+            xhttp.open('GET', url, true); xhttp.send();
+        }
+
         function adjustChartWidth() {
             // alert(window.innerWidth);
             // tblChart.style.width = (window.innerWidth - 50) + 'px';
@@ -428,6 +454,7 @@
                     <select id="cmbFolders" onchange="CmbFoldersChange();">
                         <option>---</option>
                     </select>
+                    <button onclick="RemoveFolder()" title="Remove folder (all logs for selected month)">❌</button>
                 </td>
             </tr>
             <tr>
@@ -443,7 +470,7 @@
                 <td>
                     <select id="cmbSensors" onchange="CmbSensorsChange()">
                         <option>---</option>
-                        <option>test</option>
+                        <!-- <option>test</option> -->
                     </select>
                     <span id="spnSensorTypeComment" style="margin-left: 10px;"></span>
                 </td>
@@ -557,8 +584,8 @@
 
     <div style="margin: 20px 0;">
         <h2 style="display: inline; margin-right: 20px;">Status Info</h2>
-        <button onclick="StatusInfo()" title="Refresh status info">🔄</button>
-        <button onclick="spnStatusInfo.innerHTML = ''" title="Clear status info">❌</button>
+        <button onclick="StatusInfo()" title="Show status info">🔽</button>
+        <button onclick="spnStatusInfo.innerHTML = ''" title="Hide status info">🔼</button>
     </div>
     <div class="segment">
         <span id="spnStatusInfo"></span>

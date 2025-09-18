@@ -1,0 +1,270 @@
+//* ESP8266 initializes module with BME680 and DHT22 sensors, reads their values and sends them to the hub via ESP-NOW.
+//* BSEC library is not used here, only basic BME680 functions.
+
+#include <DHT.h>      // lib_deps = adafruit/DHT sensor library@^1.4.6
+#define DHTPIN D5     // DHT sensor pin on ESP8266 D1 Mini Lite
+#define DHTTYPE DHT22 // DHT 22 (AM2302)
+DHT dht(DHTPIN, DHTTYPE);
+const float DHT_HUM_OFFSET = -10; // Humidity offset for DHT22 in percent
+
+#include <Adafruit_Sensor.h>
+#include "Adafruit_BME680.h"
+Adafruit_BME680 bme; // I2C by default
+#define SEALEVELPRESSURE_HPA (1013.25)
+// #define PRESSURE_170M_25C (993.7) // Air pressure in hPa at 25C for 170m altitude
+const float BME_TEMP_OFFSET = -1.2; // Temperature offset for BME680 in Celsius
+
+// 	boschsensortec/BSEC Software Library@^1.6.1480
+// #include "bsec.h"
+// Bsec iaqSensor; // BSEC object
+// String output = "";
+
+// void checkIaqSensorStatus()
+// {
+//     if (iaqSensor.bsecStatus != BSEC_OK)
+//     {
+//         Serial.print("BSEC error code : ");
+//         Serial.println(iaqSensor.bsecStatus);
+//     }
+//     if (iaqSensor.bme68xStatus != BSEC_OK)
+//     {
+//         Serial.print("BME680 error code : ");
+//         Serial.println(iaqSensor.bme68xStatus);
+//     }
+// }
+
+#include "AirData.h"
+AirData airData;
+
+#define SEC (1000)
+#define MIN (60 * SEC)
+
+const byte maxRetries = 3; // Max retries for getting data from sensors
+byte cntRetries = 0;       // Counter for retries
+bool shouldRetry = false;  // Flag to indicate if we should retry reading sensors
+
+const byte pinLed = LED_BUILTIN;
+void ledOn(bool on) { digitalWrite(pinLed, !on); }
+void ledOnDelay(int secs)
+{
+    ledOn(true);
+    delay(secs * SEC);
+    ledOn(false);
+}
+
+// #define USE_ESP_NOW
+#ifdef USE_ESP_NOW
+#include "MacAddresses.h"
+#ifdef ESP32
+#include <esp_now.h>
+#include <WiFi.h>
+// B uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
+uint8_t *mac = macEsp32BattConn;
+esp_now_peer_info_t peerInfo;
+// void OnDataSent(const uint8_t *mac, esp_now_send_status_t res)
+// {
+//     Serial.printf("Send status: 0x%X\n", res);
+//     // ledOn(sendStatus != ESP_NOW_SEND_SUCCESS);
+// }
+#else
+#include <espnow.h>
+#include <ESP8266WiFi.h>
+// B uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
+uint8_t *mac = macSoftEsp32BattConn;
+#endif
+// void OnDataSent(uint8_t *mac, uint8_t res)
+// {
+//     Serial.printf("Send status: 0x%X\n", res);
+//     // ledOn(sendStatus != 0);
+//     if (res != 0)
+//         ledOn_10sec();
+//     // {
+//     //     ledOn(true);
+//     //     delay(10 * SEC);
+//     // }
+//     // ledOn(false);
+// }
+#endif
+
+void setup()
+{
+    Serial.begin(115200);
+    Serial.println();
+    pinMode(pinLed, OUTPUT);
+    ledOn(false);
+
+    dht.begin();
+
+    if (!bme.begin())
+    {
+        Serial.println(F("Could not find a valid BME680 sensor, check wiring!"));
+        ledOnDelay(10);
+    }
+    // Set up oversampling and filter initialization
+    bme.setTemperatureOversampling(BME680_OS_4X);
+    bme.setHumidityOversampling(BME680_OS_4X);
+    bme.setPressureOversampling(BME680_OS_4X);
+    bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
+    bme.setGasHeater(320, 150); // 320*C for 150 ms
+
+    // while (NO_ERR != ens.begin())
+    // {
+    //     Serial.println("Communication with ENS160 device failed, please check connection");
+    //     // ledOn(true);
+    //     // delay(10 * SEC);
+    //     ledOnDelay(10);
+    // }
+    // // ledOn(false);
+    // Serial.println("ENS160 found");
+    // ens.setPWRMode(ENS160_STANDARD_MODE);
+    // ens.setTempAndHum(25.0, 50.0); // Set default temperature and humidity
+
+#ifdef USE_ESP_NOW
+    WiFi.mode(WIFI_STA);
+    while (esp_now_init() != 0)
+    {
+        Serial.println("ESP NOW INIT FAIL");
+        // ledOn(true);
+        // while (true)
+        //     delay(100);
+        ledOnDelay(10);
+    }
+    // if (esp_now_init() != 0)
+    // {
+    //     Serial.println("ESP NOW INIT FAIL");
+    //     // ledOn_10sec();
+    //     cntRetries++;
+    // }
+
+#ifdef ESP32
+    // esp_now_register_send_cb(OnDataSent);
+    memcpy(peerInfo.peer_addr, mac, 6);
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+    if (esp_now_add_peer(&peerInfo) != ESP_OK)
+    {
+        Serial.println("Failed to add peer");
+        // digitalWrite(pinLed, false);
+        ledOn(true);
+        while (true)
+            delay(100);
+    }
+#else
+    esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+    // esp_now_register_send_cb(OnDataSent);
+    auto res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+    printf("esp_now_add_peer res: 0x%X\n", res);
+    if (res != 0)
+        ledOnDelay(10);
+    // cntRetries++;
+#endif
+#endif
+    do
+    {
+        // DHT22
+        float hum = dht.readHumidity();
+        float temp = dht.readTemperature();
+        if (isnan(hum) || isnan(temp))
+        {
+            Serial.println("Failed to read from DHT sensor!");
+            // ens.setTempAndHum(25.0, 50.0); // Set default temperature and humidity
+            airData.temperature = 0;
+            airData.humidity = 0;
+            shouldRetry = true;
+        }
+        if (hum > 100)
+            shouldRetry = true;
+        airData.temperature = temp;
+        airData.humidity = (int)(hum + 0.5); // Round to nearest integer
+        airData.humidity += DHT_HUM_OFFSET; // Apply humidity offset
+        Serial.print("DHT Temp: ");
+        Serial.print(airData.temperature);
+        Serial.print(", Hum: ");
+        Serial.print(airData.humidity);
+        Serial.println("% rH");
+
+        ulong endTime = bme.beginReading();
+        if (endTime == 0)
+        {
+            Serial.println(F("Failed to begin reading :("));
+            return;
+        }
+        Serial.print(F("Reading started at "));
+        Serial.print(millis());
+        Serial.print(F(" and will finish at "));
+        Serial.println(endTime);
+
+        if (!bme.endReading())
+        {
+            Serial.println(F("Failed to complete reading :("));
+            return;
+        }
+        Serial.print(F("Reading completed at "));
+        Serial.println(millis());
+
+        Serial.print(F("Temperature = "));
+        Serial.print(bme.temperature + BME_TEMP_OFFSET); // Apply temperature offset
+        Serial.println(F(" *C"));
+
+        Serial.print(F("Pressure = "));
+        Serial.print(bme.pressure / 100.0);
+        Serial.println(F(" hPa"));
+
+        Serial.print(F("Humidity = "));
+        Serial.print(bme.humidity);
+        Serial.println(F(" %"));
+
+        Serial.print(F("Gas = "));
+        Serial.print(bme.gas_resistance / 1000.0);
+        Serial.println(F(" KOhms"));
+
+        Serial.print(F("Approx. Altitude = "));
+        Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+        Serial.println(F(" m"));
+
+        // ens.setTempAndHum(temp, hum); // Set temperature and humidity for ENS160
+        // ENS160
+        // airData.status = ens.getENS160Status();
+        // airData.AQI = ens.getAQI();
+        // airData.TVOC = ens.getTVOC();
+        // airData.ECO2 = ens.getECO2();
+        // Serial.print("ENS160 status: ");
+        // Serial.print(airData.status);
+        // Serial.print(",  CO2 equivalent: ");
+        // Serial.print(airData.ECO2);
+        // Serial.print(" ppm, TVOC: ");
+        // Serial.print(airData.TVOC);
+        // Serial.print(", AQI: ");
+        // Serial.println(airData.AQI);
+        // if (airData.AQI == 0 || airData.status == 1)
+        //     shouldRetry = true;
+        // if (shouldRetry)
+        // {
+        //     cntRetries++;
+        //     Serial.printf("Retrying... (%d/%d)\n", cntRetries, maxRetries);
+        //     ledOnDelay(10);
+        //     if (airData.status == 1)
+        //         ledOnDelay(60); // If in warm-up phase, wait longer
+        // }
+    } while (shouldRetry && cntRetries < maxRetries);
+
+#ifdef USE_ESP_NOW
+    if (cntRetries < maxRetries)
+    {
+        Serial.println("Sending data via ESP-NOW");
+        res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+        printf("Send res: 0x%X\n", res);
+        if (res != 0)
+            ledOnDelay(10);
+    }
+    ESP.deepSleep(10 * (MIN + SEC) * 1000);
+    // ESP.deepSleep((10 * (MIN + SEC) - 0.8 * SEC) * 1000); // +0.238sec
+    // ESP.deepSleep((10 * (MIN + SEC) - 1 * SEC) * 1000); // +0.238sec
+#else
+    ESP.deepSleep(60 * SEC * 1000);
+#endif
+}
+
+void loop()
+{
+}

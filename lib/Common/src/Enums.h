@@ -17,12 +17,14 @@ enum SensorType
     UndefinedSensorType,
     /// @brief Simple notfication without any additional data
     SimpleEvent,
-    /// @brief Data from ENS160+AHT21 module: temp, hum, ECO2, AQI...
+    /// @brief Data from ENS160+AHT21 module: temp, hum, ECO2, AQI... (AirData struct)
     EnsAht,
     /// @brief Data from BMP280 sensor: temperature
     Temperature,
-    /// @brief Data from ENS160 & DHT22 module: temp, hum, ECO2, AQI...
+    /// @brief Data from ENS160 & DHT22 module: temp, hum, ECO2, AQI... (AirData)
     EnsDht,
+    /// @brief Data from BME680 module: temp, hum, ECO2, TVOC... (AirData)
+    BME680,
 };
 
 enum Device
@@ -31,6 +33,7 @@ enum Device
     TestNodeMCU,
     WemosExtAnt,
     Wemos1,
+    ESP32DevKit,
 };
 
 /// @brief Depending on event type hub will handle data differently: log data, send WA notification, buzz...

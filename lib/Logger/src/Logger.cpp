@@ -64,8 +64,32 @@ String Logger::listFiles(const String &folderName)
         File f;
         while (f = folder.openNextFile())
             str += String(f.name()) + "\n";
-            // str += String(f.name()) + " - " + (f.size() / 1024) + " KB\n";
+        // str += String(f.name()) + " - " + (f.size() / 1024) + " KB\n";
         return str;
     }
     return str;
+}
+
+bool Logger::removeFolder(const String &dir)
+{
+    File root = LittleFS.open(dir);
+    if (!root || !root.isDirectory())
+        return false;
+    File file = root.openNextFile();
+    while (file)
+    {
+        String path = String(dir) + "/" + file.name();
+        Serial.println(path);
+        file.close();
+        if (!LittleFS.remove(path))
+        {
+            file.close();
+            root.close();
+            return false;
+        }
+        file = root.openNextFile();
+    }
+    LittleFS.rmdir(dir);
+    // Serial.println(res ? "Folder removed." : "Folder NOT removed.");
+    return true;
 }

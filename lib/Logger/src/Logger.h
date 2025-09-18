@@ -25,6 +25,7 @@ public:
     String listFolders();
     // lista svih fajlova u nekom folderu
     String listFiles(const String &folderName);
+    bool removeFolder(const String& folder);
 
     size_t getTotalKB() { return LittleFS.totalBytes() / 1024; }
     size_t getUsedKB() { return LittleFS.usedBytes() / 1024; }

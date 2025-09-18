@@ -17,18 +17,19 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ![Web app - interface](projects/hub/docs/web_page_interface.png)
 
 ## TODO
-
 - [x] Add notification control (when to send WA message, beep etc) to web app
-- [ ] Add data visualization using some JS library
-- [ ] Add more sensors
+- [x] Add data visualization using some JS library
+- [ ] Add more sensor nodes
 
 ## Links
-https://randomnerdtutorials.com/esp-now-two-way-communication-esp32/
-https://randomnerdtutorials.com/esp-now-two-way-communication-esp8266-nodemcu/
-https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
-https://randomnerdtutorials.com/esp32-esp-now-wi-fi-web-server/
-https://rntlab.com/question/esp-now-gateway-wifi_mode_sta-with-a-wifi-router/
-https://forum.arduino.cc/t/use-esp-now-and-wifi-simultaneously-on-esp32/1034555/16
+
+### ESP-NOW
+- https://randomnerdtutorials.com/esp-now-two-way-communication-esp32/
+- https://randomnerdtutorials.com/esp-now-two-way-communication-esp8266-nodemcu/
+- https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
+- https://randomnerdtutorials.com/esp32-esp-now-wi-fi-web-server/
+- https://rntlab.com/question/esp-now-gateway-wifi_mode_sta-with-a-wifi-router/
+- https://forum.arduino.cc/t/use-esp-now-and-wifi-simultaneously-on-esp32/1034555/16
 
 ## Remarks
  - ESP-NOW communication works if WiFi channel on the router is set to 1. There might be ways to fix that by using wifi_promiscuous_enable()...

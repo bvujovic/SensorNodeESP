@@ -21,8 +21,9 @@ MyBlinky buzzer(18);
 
 char line[80]; // general purpose char array - formating data
 #include "my_esp_now.h"
-extern "C" {
-  #include "lwip/apps/sntp.h"
+extern "C"
+{
+#include "lwip/apps/sntp.h"
 }
 #include "time.h"
 struct tm ti;
@@ -34,11 +35,12 @@ TimeWatcher tw(ti);
 
 #include "NotifyWhatsApp.h"
 
+const byte lastIpNumber = 81; // last byte of IP address for static IP assignment
 void wifiConfig(bool isStaticIP)
 {
     if (isStaticIP)
     {
-        IPAddress ipa(192, 168, 0, 80);
+        IPAddress ipa(192, 168, 0, lastIpNumber);
         IPAddress gateway(192, 168, 0, 254);
         IPAddress subnet(255, 255, 255, 0);
         WiFi.config(ipa, gateway, subnet);
@@ -51,14 +53,28 @@ void startWebServer()
 {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *req)
               { req->send(LittleFS, "/ws/index.html", "text/html"); });
-    server.on("/img/nodes.png", HTTP_GET, [](AsyncWebServerRequest *req)
-              { req->send(LittleFS, "/ws/img/nodes.png", "image/png"); });
-    server.on("/img/google_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
-              { req->send(LittleFS, "/ws/img/google_16.png", "image/png"); });
-    server.on("/img/iq_air_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
-              { req->send(LittleFS, "/ws/img/iq_air_16.png", "image/png"); });
-    server.on("/img/rhmz.ico", HTTP_GET, [](AsyncWebServerRequest *req)
-              { req->send(LittleFS, "/ws/img/rhmz.ico", "image/x-icon"); });
+    //     {
+    // auto response = req->beginResponse(LittleFS, "/ws/index.html", "text/html");
+    // response->addHeader("Cache-Control", "public, max-age=604800, immutable");
+    // req->send(response); });
+
+    // server.on("/img/nodes.png", HTTP_GET, [](AsyncWebServerRequest *req)
+    //           { req->send(LittleFS, "/ws/img/nodes.png", "image/png"); });
+    // server.on("/img/google_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
+    //           { req->send(LittleFS, "/ws/img/google_16.png", "image/png"); });
+    // server.on("/img/iq_air_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
+    //           { req->send(LittleFS, "/ws/img/iq_air_16.png", "image/png"); });
+    // server.on("/img/rhmz.ico", HTTP_GET, [](AsyncWebServerRequest *req)
+    //           { req->send(LittleFS, "/ws/img/rhmz.ico", "image/x-icon"); });
+
+    // server.on("/img/iq_air_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
+    //           {
+    //     auto response = req->beginResponse(LittleFS, "/ws/img/iq_air_16.png", "image/png");
+    //     response->addHeader("Cache-Control", "public, max-age=31536000, immutable");
+    //     req->send(response); });
+
+    server.serveStatic("/img/", LittleFS, "/ws/img/")
+        .setCacheControl("max-age=604800, public, immutable"); // cache for 7 days
 
     server.on("/log", HTTP_GET, [](AsyncWebServerRequest *req)
               {
@@ -119,22 +135,29 @@ void startWebServer()
               {
         getLocalTime(&ti);
         strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
-        int percHeap = 100 * ESP.getFreeHeap() / ESP.getHeapSize();
-        size_t freeStorage = LittleFS.totalBytes() - LittleFS.usedBytes();
-        int percStorage = 100 * freeStorage / LittleFS.totalBytes();
-        String s = String("Current time: ") + line \
+        auto percHeap = 100 * ESP.getFreeHeap() / ESP.getHeapSize();
+        auto storageTotal = LittleFS.totalBytes();
+        auto freeStorage = storageTotal - LittleFS.usedBytes();
+        auto percStorage = 100 * freeStorage / storageTotal;
+        auto s = String("Current time: ") + line \
         + "Heap: free " + (ESP.getFreeHeap() / 1024) + " KB / " + (ESP.getHeapSize() / 1024) + " KB total (" + percHeap + "%)\n" \
-        + "Storage: free " + (freeStorage / 1024) + " KB / " + (LittleFS.totalBytes() / 1024) + " KB total (" + percStorage + "%)\n";
+        + "Storage: free " + (freeStorage / 1024) + " KB / " + (storageTotal / 1024) + " KB total (" + percStorage + "%)\n";
         s.replace("\n", "<br>");
         req->send(200, "text/plain", s); });
+
+    server.on("/removeDir", HTTP_GET, [](AsyncWebServerRequest *req)
+              {
+        auto dir = req->arg("dir");
+        req->send(200, "text/plain", logger.removeFolder(dir) ? "1" : "0"); });
 
     server.begin();
 }
 
-void timeSyncCallback(struct timeval *tv)
-{
-    Serial.println("Time synchronized via NTP.");
-}
+// B
+//  void timeSyncCallback(struct timeval *tv)
+//  {
+//      Serial.println("Time synchronized via NTP.");
+//  }
 
 void setup()
 {
@@ -158,8 +181,9 @@ void setup()
     Serial.println(" connected.");
     Serial.print("ESP32 Web Server's IP address: ");
     Serial.println(WiFi.localIP());
-    sntp_set_sync_interval(86400000);  // once per day
-    sntp_set_time_sync_notification_cb(timeSyncCallback);
+    // B
+    //  sntp_set_sync_interval(86400000);  // once per day
+    //  sntp_set_time_sync_notification_cb(timeSyncCallback);
     configTime(3600, 3600, "rs.pool.ntp.org");
     // configTime("CET-1CEST,M3.last.0/2,M10.last.0/3", "rs.pool.ntp.org");
 
@@ -215,7 +239,7 @@ void loop()
 
     if (isTimeSet)
     {
-        if (WiFi.localIP()[3] == 80) // if time and IP address are set...
+        if (WiFi.localIP()[3] == lastIpNumber) // if time and IP address are set...
         {
             getLocalTime(&ti);
             tw.buzzIN();
