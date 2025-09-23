@@ -8,7 +8,10 @@ ESP wakes up every 10 minutes and sends data from sensors to the hub (server) vi
 
 ## Client: ATtiny85 & STX882
 ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...), sends signal via STX882, goes back to sleep. Device can be battery powered.
+### Movement detection
 ![Client: ATtiny85 (STX882...)](projects/attiny_stx882/docs/attiny_stx882_test_device_pir.jpg)
+### Water detection
+![Client: ATtiny85 (STX882...)](projects/attiny_stx882/docs/attiny_stx882_finished_water_detect.jpg)
 
 ## Server: ESP32 (SRX882, buzzer)
 ![Server: ESP32 (SRX882, buzzer)](projects/hub/docs/esp32_server_device.jpg)
@@ -17,9 +20,13 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ![Web app - interface](projects/hub/docs/web_page_interface.png)
 
 ## TODO
-- [x] Add notification control (when to send WA message, beep etc) to web app
-- [x] Add data visualization using some JS library
 - [ ] Add more sensor nodes
+    - [ ] BME680
+    - [ ] SCD30
+    - [ ] ATtiny & HC-12
+        - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers
+- [ ] Improve web app interface
+
 
 ## Links
 
