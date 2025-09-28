@@ -2,7 +2,6 @@
 //* This code is executing on ATtiny85 @1MHz w/ HC-12 (transmitter).
 //* Sleep current: ~0.1mA
 
-
 #include <Arduino.h>
 #include <avr/power.h>
 #include <avr/sleep.h>
@@ -11,13 +10,11 @@
 #define PIN_RX 3 // HC-12 RX Pin
 #define PIN_TX 4 // HC-12 TX Pin
 SoftwareSerial HC12(PIN_RX, PIN_TX);
-//* #define PIN_IN 1; // PB1 - wire for water detection, button (INPUT_PULLUP); PIR (INPUT)
 
-#define CNT_REPEAT_SEND 3    // How many times signal is sent.
-#define ITV_PAUSE 2          // (seconds) Pause between sending signals.
-#define ITV_PULSE 5000       // (microseconds) Duration of 1 data pulse (LOW).
-#define ITV_BREAK_PULSE 1000 // (microseconds) Duration of 1 break pulse (HIGH).
-#define ITV_PULSE_SEND 10    // How many pulses are sent for 1 signal.
+#define CNT_REPEAT_SEND 3         // How many times signal is sent.
+#define ITV_PAUSE 2               // (seconds) Pause between sending signals.
+#define ITV_INIT_WAIT 5           // (seconds) Initial wait before going to sleep and start listening for interrupt.
+#define SENSOR_NAME "KitchenSink" // Name of the sensor, used in the message.
 
 #define CMD_NONE 0
 #define CMD_SIGNAL 1
@@ -37,24 +34,14 @@ void setup()
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     ADCSRA &= ~bit(ADEN); // Turn off ADC to save power.
 
-    // pinMode(PB2, SIGNAL_ON == HIGH ? INPUT : INPUT_PULLUP);
-#if SIGNAL_ON == HIGH
-//* NOT TESTED YET!
-// For PIR sensor, we need to wait a bit after setting pin to INPUT
-//    pinMode(PB2, INPUT);
-//    for (int i = 0; i < 5 * 1000; i++)
-//        delayMicroseconds(1000);
-//    // TODO zameniti ovo fiksno cekanje od 5sec za cekanje dok se signal ne spusti na LOW, npr...
-//    while (bit_is_set(PINB, PB2))
-//        for (int i = 0; i < 200; i++)
-//            delayMicroseconds(1000);
-#else
-    pinMode(PB2, INPUT_PULLUP);
-#endif
+    // Delay is needed for PIR sensor.
+    // Otherwise we would trigger interrupt again immediately after waking up.
+    for (int i = 0; i < ITV_INIT_WAIT * 1000; i++)
+        delayMicroseconds(1000);
 
-//    PCMSK |= _BV(PCINT1); // Configure pin change interrupt.
-//    GIFR |= bit(PCIF);    // clear any outstanding interrupts
-//    GIMSK |= bit(PCIE);   // enable pin change interrupts
+    pinMode(PB2, INPUT_PULLUP);
+
+    // Enable INT0 interrupt on LOW
     GIMSK |= (1 << INT0);
     MCUCR &= ~(1 << ISC01);
     MCUCR &= ~(1 << ISC00);
@@ -66,16 +53,18 @@ char buff[20];
 void send()
 {
     i++;
-//    HC12.write("Tst\n");
-//    HC12.write(String(i).c_str());
-    sprintf(buff, " Test:%03d.\n", i % 1000);
-    HC12.write(buff);
+    //    HC12.write("Tst\n");
+    //    HC12.write(String(i).c_str());
+    // sprintf(buff, " Test:%03d.\n", i % 1000);
+    HC12.write(SENSOR_NAME);
+    HC12.write('\n');
+    // HC12.write(buff);
 }
 
 void loop()
 {
     //?pinMode(PIN_TX, INPUT); // Set PIN_TX to INPUT in order to save power.
-    sei();                  // Enable interrupts again, go to sleep and wait for intterrupt.
+    sei(); // Enable interrupts again, go to sleep and wait for intterrupt.
     go_to_sleep();
 
     cli(); // disable interupts

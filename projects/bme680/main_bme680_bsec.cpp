@@ -1,6 +1,5 @@
-//* Current consumption (ESP32, BME680, BSEC, 3.3V): ~45 mA
-//* Check current consuption whn esp-now code is enabled and with ESP32 pro mini
-// TODO upload this code to ESP32-C3 ProMini, and main_hub to ESP32 narrow board
+//* Current consumption (ESP32, BME680, BSEC, 5V, ESP-NOW): ~140 mA
+// TODO upload this code to ESP32-C3 ProMini with bsec2 library
 
 #include <Arduino.h>
 #include "bsec.h" // boschsensortec/BSEC Software Library@^1.8.1492

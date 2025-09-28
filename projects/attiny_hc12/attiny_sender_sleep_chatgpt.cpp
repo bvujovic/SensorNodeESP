@@ -23,12 +23,22 @@ void goToSleep()
 {
     wakeUpFlag = false;
 
-    // Enable INT0 interrupt on LOW
+    // // Enable INT0 interrupt on LOW
+    // GIMSK |= (1 << INT0);
+    // MCUCR &= ~(1 << ISC01);
+    // MCUCR &= ~(1 << ISC00);
+    
+    // Enable INT0 interrupt on Rising Edge
     GIMSK |= (1 << INT0);
-    MCUCR &= ~(1 << ISC01);
-    MCUCR &= ~(1 << ISC00);
+    MCUCR |= (1 << ISC01) | (1 << ISC00);
+    
+    // // Enable INT0 interrupt on 
+    // GIMSK |= (1 << INT0);
+    // MCUCR |= (1 << ISC00);
+    // MCUCR &= ~(1 << ISC01);
 
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+    // set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+    set_sleep_mode(SLEEP_MODE_IDLE);
     sleep_enable();
     sei();       // Enable global interrupts
     sleep_cpu(); // Go to sleep
@@ -39,7 +49,8 @@ void goToSleep()
 
 void setup()
 {
-    pinMode(WAKE_PIN, INPUT_PULLUP); // External button/sensor pulls low
+    // pinMode(WAKE_PIN, INPUT_PULLUP); // External button/sensor pulls low
+    pinMode(WAKE_PIN, INPUT);
     HC12.begin(4800);
 }
 
