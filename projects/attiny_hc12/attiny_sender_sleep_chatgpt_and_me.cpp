@@ -13,13 +13,14 @@ SoftwareSerial HC12(PIN_RX, PIN_TX);
 
 #define CNT_REPEAT_SEND 3         // How many times signal is sent.
 #define ITV_PAUSE 2               // (seconds) Pause between sending signals.
-#define ITV_INIT_WAIT 5           // (seconds) Initial wait before going to sleep and start listening for interrupt.
 #define SENSOR_NAME "KitchenSink" // Name of the sensor, used in the message.
 
 #define CMD_NONE 0
 #define CMD_SIGNAL 1
 
-#define SIGNAL_ON LOW // This value should be HIGH for PIR, LOW for water detection wires, test button...
+#define SIGNAL_ON LOW    // This value should be HIGH for PIR, LOW for water detection wires, test button...
+#define ITV_INIT_WAIT 0  // (seconds) Initial wait before going to sleep and start listening for interrupt.
+#define ITV_COOL_DOWN 20 // (seconds) Cool-down period after sending signal.
 
 volatile uint8_t cmd = CMD_NONE;
 
@@ -47,17 +48,18 @@ void setup()
     MCUCR &= ~(1 << ISC00);
 }
 
-int i = 123;
-char buff[20];
+// int i = 123;
+// char buff[20];
 
 void send()
 {
-    i++;
+    // i++;
     //    HC12.write("Tst\n");
     //    HC12.write(String(i).c_str());
     // sprintf(buff, " Test:%03d.\n", i % 1000);
-    HC12.write(SENSOR_NAME);
-    HC12.write('\n');
+    // HC12.write(SENSOR_NAME);
+    // HC12.write('\n');
+    HC12.println(SENSOR_NAME); // Send sensor name with newline
     // HC12.write(buff);
 }
 
@@ -75,15 +77,27 @@ void loop()
         HC12.begin(4800);
         delay(10); // Wait a bit for HC-12 to stabilize.
 
-        uint8_t j = 0;
-        while (true)
+        // uint8_t j = 0;
+        // while (true)
+        // {
+        //     send();
+        //     if (++j >= CNT_REPEAT_SEND)
+        //         break;
+        //     for (int i = 0; i < ITV_PAUSE * 1000; i++)
+        //         delayMicroseconds(1000);
+        // }
+        for (uint8_t j = 0; j < CNT_REPEAT_SEND - 1; j++)
         {
             send();
-            if (++j >= CNT_REPEAT_SEND)
-                break;
             for (int i = 0; i < ITV_PAUSE * 1000; i++)
                 delayMicroseconds(1000);
         }
+        send();     // Send last one without delay after it.
+        HC12.end(); // Power off HC-12
+
+        // cool-down period after sending
+        for (int i = 0; i < ITV_COOL_DOWN * 1000; i++)
+            delayMicroseconds(1000);
     }
     sei(); // enable interupts
     cmd = CMD_NONE;

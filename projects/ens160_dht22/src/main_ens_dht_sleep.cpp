@@ -47,7 +47,8 @@ esp_now_peer_info_t peerInfo;
 #include <espnow.h>
 #include <ESP8266WiFi.h>
 // B uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
-uint8_t *mac = macSoftEsp32BattConn;
+// uint8_t *mac = macSoftEsp32BattConn;
+uint8_t *mac = macSoftEsp32DevIpex;
 #endif
 // void OnDataSent(uint8_t *mac, uint8_t res)
 // {
@@ -186,7 +187,8 @@ void setup()
     }
     // ESP.deepSleep(10 * (MIN + SEC) * 1000);
     // ESP.deepSleep((10 * (MIN + SEC) - 0.8 * SEC) * 1000); // +0.238sec
-    ESP.deepSleep((10 * (MIN + SEC) - 1 * SEC) * 1000); // +0.238sec
+    // ESP.deepSleep((10 * (MIN + SEC) - 1 * SEC) * 1000); // -
+    ESP.deepSleep((10 * (MIN + SEC) - 0.9 * SEC) * 1000); // 
 #else
     ESP.deepSleep(10 * SEC * 1000);
 #endif

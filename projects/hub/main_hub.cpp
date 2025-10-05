@@ -33,9 +33,11 @@ bool isTimeSet = false;
 #include "TimeWatcher.h"
 TimeWatcher tw(ti);
 
+// HardwareSerial HC12(2);
+
 #include "NotifyWhatsApp.h"
 
-const byte lastIpNumber = 81; // last byte of IP address for static IP assignment
+const byte lastIpNumber = 80; // last byte of IP address for static IP assignment
 void wifiConfig(bool isStaticIP)
 {
     if (isStaticIP)
@@ -167,6 +169,7 @@ void setup()
     LittleFS.begin();
     logger.setTimeInfo(ti);
     tw.setBlinky(buzzer.getBlinky());
+    // HC12.begin(4800, SERIAL_8N1, 16, 17); // RX, TX
 
     // WiFi
     WiFi.mode(WIFI_AP_STA); // ESP32 has to be in this mode to be able to use ESP-NOW and Web Server at the same time
@@ -201,8 +204,29 @@ void setup()
     esp_now_register_send_cb(OnDataSent);
 }
 
+// String message;
+
 void loop()
 {
+    // while (HC12.available())
+    // {
+    //     char c = HC12.read();
+    //     Serial.write(c); // forward everything to Serial Monitor
+    // }
+    // if (HC12.available())
+    // {
+    //     auto now = millis();
+    //     // ledOn(true);
+    //     message = HC12.readStringUntil('\n');
+    //     // Serial.println("Time: " + String(millis() - now) + " ms");
+    //     Serial.println("Received: " + message);
+    //     // const char *msg = message.c_str();
+    //     // Serial.println(msg + 1); // skip first character
+    //     if (millis() - now < 100)
+    //         delay(100);
+    //     // ledOn(false);
+    // }
+
     // Parsing signals from simple sensors (PIR, water detection...) with SRX882
     SrxCommand cmd = srx.refresh(pulseIn(pinRadioIn, LOW), millis());
     if (cmd != None)

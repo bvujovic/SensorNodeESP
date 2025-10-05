@@ -1,7 +1,6 @@
 //* ATtiny sleeps, wakes up on LOW (test button, water detection), blinks 3x, goes back to sleep
 //* This code is executing on ATtiny85 @1MHz.
 
-
 #include <Arduino.h>
 #include <avr/power.h>
 #include <avr/sleep.h>

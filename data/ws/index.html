@@ -225,10 +225,8 @@
                     cmbSensors.appendChild(CreateOption(NOTHING, NOTHING));
                     for (const s of sensors)
                         cmbSensors.appendChild(CreateOption(s, s));
-                    // if (selectedSensor == NOTHING && sensors.includes('EnsDht'))
-                    //     selectedSensor = 'EnsDht';
-                    if (selectedSensor == NOTHING && sensors.includes('BME680'))
-                        selectedSensor = 'BME680';
+                    if (selectedSensor == NOTHING && sensors.includes('EnsDht'))
+                        selectedSensor = 'EnsDht';
                     cmbSensors.value = selectedSensor;
                     CmbSensorsChange();
                 }
