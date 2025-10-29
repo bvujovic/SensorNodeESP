@@ -33,7 +33,7 @@ bool isTimeSet = false;
 #include "TimeWatcher.h"
 TimeWatcher tw(ti);
 
-// HardwareSerial HC12(2);
+HardwareSerial HC12(2);
 
 #include "NotifyWhatsApp.h"
 
@@ -152,6 +152,12 @@ void startWebServer()
         auto dir = req->arg("dir");
         req->send(200, "text/plain", logger.removeFolder(dir) ? "1" : "0"); });
 
+    server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *req)
+              { 
+        req->send(200, "text/plain", "");
+        //TODO if restart() doesn't work, try: wifiConfig(false); ... get current time, wifiConfig(true);
+        ESP.restart(); });
+
     server.begin();
 }
 
@@ -169,7 +175,7 @@ void setup()
     LittleFS.begin();
     logger.setTimeInfo(ti);
     tw.setBlinky(buzzer.getBlinky());
-    // HC12.begin(4800, SERIAL_8N1, 16, 17); // RX, TX
+    HC12.begin(4800, SERIAL_8N1, 16, 17); // RX, TX
 
     // WiFi
     WiFi.mode(WIFI_AP_STA); // ESP32 has to be in this mode to be able to use ESP-NOW and Web Server at the same time
@@ -187,7 +193,8 @@ void setup()
     // B
     //  sntp_set_sync_interval(86400000);  // once per day
     //  sntp_set_time_sync_notification_cb(timeSyncCallback);
-    configTime(3600, 3600, "rs.pool.ntp.org");
+    // configTime(3600, 3600, "rs.pool.ntp.org");
+    configTime(3600, 0, "rs.pool.ntp.org");
     // configTime("CET-1CEST,M3.last.0/2,M10.last.0/3", "rs.pool.ntp.org");
 
     startWebServer();
@@ -204,7 +211,7 @@ void setup()
     esp_now_register_send_cb(OnDataSent);
 }
 
-// String message;
+String message;
 
 void loop()
 {
@@ -216,6 +223,7 @@ void loop()
     // if (HC12.available())
     // {
     //     auto now = millis();
+    //     Serial.println('x');
     //     // ledOn(true);
     //     message = HC12.readStringUntil('\n');
     //     // Serial.println("Time: " + String(millis() - now) + " ms");
@@ -225,6 +233,7 @@ void loop()
     //     if (millis() - now < 100)
     //         delay(100);
     //     // ledOn(false);
+    //     Serial.println('z');
     // }
 
     // Parsing signals from simple sensors (PIR, water detection...) with SRX882

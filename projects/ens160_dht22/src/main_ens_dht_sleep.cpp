@@ -188,7 +188,8 @@ void setup()
     // ESP.deepSleep(10 * (MIN + SEC) * 1000);
     // ESP.deepSleep((10 * (MIN + SEC) - 0.8 * SEC) * 1000); // +0.238sec
     // ESP.deepSleep((10 * (MIN + SEC) - 1 * SEC) * 1000); // -
-    ESP.deepSleep((10 * (MIN + SEC) - 0.9 * SEC) * 1000); // 
+    // ESP.deepSleep((10 * (MIN + SEC) - 0.9 * SEC) * 1000); // -
+    ESP.deepSleep((10 * (MIN + SEC) - 0.87 * SEC) * 1000); 
 #else
     ESP.deepSleep(10 * SEC * 1000);
 #endif

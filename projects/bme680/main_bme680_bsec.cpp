@@ -12,7 +12,7 @@ AirData airData;
 #define SECOND (1000)
 #define MINUTE (60 * SECOND)
 
-#include "OneButton.h"
+#include "OneButton.h"     // mathertel/OneButton@^2.6.1
 const byte pinBtnSave = 4; // Pin for the button to save settings
 OneButton btnSave(pinBtnSave, true);
 
@@ -196,12 +196,26 @@ void setup()
 #endif
 }
 
-const ulong itvSendData = 10 * MINUTE - 2 * SECOND; // Send data interval
+// const ulong itvSendData = 10 * MINUTE - 0.01 * SECOND; // kasni
+const ulong itvSendData = 10 * MINUTE - 0.02 * SECOND; 
+bool newDataAvailable = false;
 
 void loop()
 {
     btnSave.tick();
-    if (iaqSensor.run() && (msLastData == 0 || millis() > msLastData + itvSendData))
+    if (iaqSensor.run()) // If new data is available, save it to airData
+    {
+#ifdef USE_ESP_NOW
+        airData.temperature = iaqSensor.temperature;
+        airData.humidity = iaqSensor.humidity + 0.5; // Round to nearest integer
+        airData.status = iaqSensor.iaqAccuracy;
+        airData.TVOC = iaqSensor.breathVocEquivalent * 100 + 0.5;
+        airData.ECO2 = iaqSensor.co2Equivalent + 0.5; // Round to nearest integer
+        newDataAvailable = true;
+#endif
+    }
+    if (newDataAvailable && (msLastData == 0 || millis() > msLastData + itvSendData)
+        && digitalRead(pinBtnSave) == HIGH) // don't send data when button is pressed
     {
         output = String("IAQ: ") + iaqSensor.iaq + " (" + iaqSensor.iaqAccuracy + "), " +
                  "eCO2: " + iaqSensor.co2Equivalent + " ppm, " +
@@ -214,11 +228,6 @@ void loop()
 #ifdef USE_ESP_NOW
         // B if (cntRetries < maxRetries)
         {
-            airData.temperature = iaqSensor.temperature;
-            airData.humidity = iaqSensor.humidity + 0.5; // Round to nearest integer
-            airData.status = iaqSensor.iaqAccuracy;
-            airData.TVOC = iaqSensor.breathVocEquivalent * 100 + 0.5;
-            airData.ECO2 = iaqSensor.co2Equivalent + 0.5; // Round to nearest integer
             Serial.println("Sending data via ESP-NOW");
             auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
             printf("Send res: 0x%X\n", res);
@@ -229,9 +238,41 @@ void loop()
         // ESP.deepSleep((10 * (MIN + SEC) - 0.8 * SEC) * 1000); // +0.238sec
         // ESP.deepSleep((10 * (MIN + SEC) - 1 * SEC) * 1000); // +0.238sec
 #endif
-
         ledOn(iaqSensor.iaqAccuracy >= 2); // Turn on LED if IAQ accuracy is good
         msLastData = millis();
+        newDataAvailable = false;
     }
+    //     if (iaqSensor.run() && (msLastData == 0 || millis() > msLastData + itvSendData))
+    //     {
+    //         output = String("IAQ: ") + iaqSensor.iaq + " (" + iaqSensor.iaqAccuracy + "), " +
+    //                  "eCO2: " + iaqSensor.co2Equivalent + " ppm, " +
+    //                  "TVOC: " + iaqSensor.breathVocEquivalent + " ppb, " +
+    //                  "Temp: " + iaqSensor.rawTemperature + " °C, " +
+    //                  "Hum: " + iaqSensor.rawHumidity + " %, " +
+    //                  "Pressure: " + (int)(iaqSensor.pressure / 100) + " hPa";
+    //         Serial.println(output);
+    //         Serial.println(String(iaqSensor.temperature) + "\t" + String(iaqSensor.humidity));
+    // #ifdef USE_ESP_NOW
+    //         // B if (cntRetries < maxRetries)
+    //         {
+    //             airData.temperature = iaqSensor.temperature;
+    //             airData.humidity = iaqSensor.humidity + 0.5; // Round to nearest integer
+    //             airData.status = iaqSensor.iaqAccuracy;
+    //             airData.TVOC = iaqSensor.breathVocEquivalent * 100 + 0.5;
+    //             airData.ECO2 = iaqSensor.co2Equivalent + 0.5; // Round to nearest integer
+    //             Serial.println("Sending data via ESP-NOW");
+    //             auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+    //             printf("Send res: 0x%X\n", res);
+    //             if (res != 0)
+    //                 ledOnDelay(10);
+    //         }
+    //         // ESP.deepSleep(10 * (MIN + SEC) * 1000);
+    //         // ESP.deepSleep((10 * (MIN + SEC) - 0.8 * SEC) * 1000); // +0.238sec
+    //         // ESP.deepSleep((10 * (MIN + SEC) - 1 * SEC) * 1000); // +0.238sec
+    // #endif
+
+    //         ledOn(iaqSensor.iaqAccuracy >= 2); // Turn on LED if IAQ accuracy is good
+    //         msLastData = millis();
+    //     }
     delay(20); // to avoid hammering CPU
 }

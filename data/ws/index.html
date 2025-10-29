@@ -60,22 +60,38 @@
             /* Ensures the table doesn’t get too wide */
         }
 
-        #myChart {
+        /*
+        #myCanvas {
             max-height: 300px;
             display: block;
-            /* Prevents inline whitespace issues */
+            Prevents inline whitespace issues
             max-width: 100%;
-            /* Ensures the chart does not overflow */
+            Ensures the chart does not overflow
             height: auto;
-            /* Maintain aspect ratio */
+            Maintain aspect ratio
         }
+        */
 
         .linkIcon {
             width: 16px;
             margin-right: 8px;
         }
+
+        canvas#myCanvas {
+            max-height: 300px;
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            transform: translate3d(0, 0, 0);
+            /* Force GPU acceleration */
+            will-change: transform;
+            /* Hint Chrome to keep layer */
+        }
     </style>
     <script>
+        let chart;
+        let canvas;
+
         function CmbFileNameChange() {
             txtContent.value = '';
             const fileName = cmbFileName.value;
@@ -411,12 +427,12 @@
         function adjustChartWidth() {
             // alert(window.innerWidth);
             // tblChart.style.width = (window.innerWidth - 50) + 'px';
-            // myChart.style.width = '100%';
-            // alert(window.innerWidth + ", " + tblChart.style.width + ", " + myChart.style.width);
+            // myCanvas.style.width = '100%';
+            // alert(window.innerWidth + ", " + tblChart.style.width + ", " + myCanvas.style.width);
             let width = window.innerWidth - 50;
             tblChart.style.width = width + 'px';  // Set table width
-            myChart.style.width = width + 'px';   // Match canvas width
-            myChart.width = width;  // Explicitly set the canvas width to match
+            myCanvas.style.width = width + 'px';   // Match canvas width
+            myCanvas.width = width;  // Explicitly set the canvas width to match
         }
         window.addEventListener('resize', adjustChartWidth);
 
@@ -508,45 +524,9 @@
                 </tr>
                 <tr>
                     <td colspan="2">
-                        <canvas id="myChart"></canvas>
+                        <canvas id="myCanvas"></canvas>
                         <script>
-                            var xValues = []; // '01:36:22', '01:39:22', '01:55:35'
-                            const yValues = []; // 1, 4, 9
-                            var chart = new Chart("myChart", {
-                                type: "line",
-                                data: {
-                                    labels: xValues,
-                                    datasets: [{
-                                        fill: false,
-                                        lineTension: 0,
-                                        backgroundColor: "rgba(0,0,255,1.0)",
-                                        borderColor: "rgba(0,0,255,0.1)",
-                                        data: yValues
-                                    }]
-                                },
-                                options: {
-                                    plugins: { legend: { display: false } },
-                                    scales: {
-                                        x: {
-                                            type: 'time',
-                                            time: {
-                                                unit: 'hour',
-                                                displayFormats: {
-                                                    hour: 'HH:mm'  // 'HH' ?
-                                                }
-                                            },
-                                            ticks: {
-                                                // stepSize: 5 // Show label every 5 minutes                                            }
-                                                // autoSkip: true,
-                                                // maxTicksLimit: 10 // Show a maximum of 6 labels
-                                                source: 'auto', // Let Chart.js position the ticks
-                                                stepSize: 1      // Ensure only full hours are shown
-                                            }
-                                        },
-                                        y: { min: 0 }
-                                    }
-                                }
-                            });                          
+
                         </script>
                     </td>
                 </tr>
@@ -604,6 +584,53 @@
         </select>
         minutes
     </div>
+    <script>
+        var xValues = []; // '01:36:22', '01:39:22', '01:55:35'
+        const yValues = []; // 1, 4, 9
+        canvas = document.getElementById('myCanvas');
+        chart = new Chart(canvas.getContext('2d'), {
+            type: "line",
+            data: {
+                labels: xValues,
+                datasets: [{
+                    fill: false,
+                    lineTension: 0,
+                    backgroundColor: "rgba(0,0,255,1.0)",
+                    borderColor: "rgba(0,0,255,0.1)",
+                    data: yValues
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            displayFormats: {
+                                hour: 'HH:mm'  // 'HH' ?
+                            }
+                        },
+                        ticks: {
+                            // stepSize: 5 // Show label every 5 minutes                                            }
+                            // autoSkip: true,
+                            // maxTicksLimit: 10 // Show a maximum of 6 labels
+                            source: 'auto', // Let Chart.js position the ticks
+                            stepSize: 1      // Ensure only full hours are shown
+                        }
+                    },
+                    y: { min: 0 }
+                }
+            }
+        });
+        // window.myChart = chart;
+
+        // window.addEventListener('scroll', () => {
+        //     if (window.myChart) {
+        //         window.myChart.resize();  // forces Chart.js to repaint
+        //     }
+        // });
+    </script>
 </body>
 
 </html>

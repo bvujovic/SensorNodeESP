@@ -98,6 +98,7 @@ void setPeers()
     // esp_now_add_peer(mac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
     setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::BME680, Device::ESP32DevKit);
+    setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::SCD30, Device::WemosExtAnt);
     //* When adding more peers, don't forget to update size of peers[] array.
     addPeers();
 }

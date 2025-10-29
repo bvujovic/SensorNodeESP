@@ -25,6 +25,8 @@ enum SensorType
     EnsDht,
     /// @brief Data from BME680 module: temp, hum, ECO2, TVOC... (AirData)
     BME680,
+    /// @brief Data from SCD30 sensor: CO2, temp, hum... (AirData)
+    SCD30,
 };
 
 enum Device

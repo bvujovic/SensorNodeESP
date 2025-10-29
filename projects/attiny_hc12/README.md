@@ -19,10 +19,8 @@ Device consumes ~25mA while sending data for a bit. In cool-down period and peri
 For **HC-12**, AT command "AT+RX" returns: OK+B4800, OK+RC030, OK+RP:+08dBm, OK+FU2.
 
 ## TODO
-- [x] Can ESP32 hub receive this client messages?
-- [x] Try to improve attiny_sender_sleep_chatgpt_and_me.cpp:
-    - [x] If signal is constantly HIGH/LOW (e.g. wires are in the water) device shouldn't keep sending alerts because it would drain battery fast. Device should sleep for some fixed amount of time after alert is sent.
-- [ ] What fields should sent string contain: device ID (string), [alert ID so that main hub knows if it's the same alert that is reported e.g. 3 times for safety], ...
+- [ ] Try to find an optimal design for ATtiny85 & HC-12 client device: ATtiny, HC-12, battery, PIR, (battery indicator, battery charger)...
+    - [ ] Make 2, 3 different designes for different purposes: smallest possible (not user friendly), user friendly (with batt. indicator and charger).
 - [ ] Try to improve on current consumption (see ChatGPT "Sleep interrupt with HC-12" -> "Why the HC-12 causes current fluctuations"):
     - [ ] In code: AT commands for sleep/wake up HC-12. "Try sending AT+SLEEP from your working sketch, then measure current. (Look for OK+SLEEP reply.)"
     - [ ] Turn ON/OFF HC-12 using transistor "Power-gate the HC-12 (...small MOSFET/transistor)"
