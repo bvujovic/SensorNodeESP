@@ -322,7 +322,7 @@
                 });
                 chart.options.scales.y.min = 0;
                 chart.options.scales.y.ticks.stepSize = undefined;
-                if (cmbSensors.value == 'EnsDht' || cmbSensors.value == 'BME680') {
+                if (cmbSensors.value == 'EnsDht' || cmbSensors.value == 'BME680' || cmbSensors.value == 'SCD30') {
                     if (cmbChartParams.value == 0) { // temp
                         // const validYs = ys.filter(v => !isNaN(v));
                         // chart.options.scales.y.min = Math.min(...validYs) - 1;
@@ -344,7 +344,7 @@
 
         //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
         //* default parameters: TVOC, temp
-        const lastChartParam = { EnsAht: 4, Temp: 0, EnsDht: 4, BME680: 4 };
+        const lastChartParam = { EnsAht: 4, Temp: 0, EnsDht: 4, BME680: 4, SCD30: 2 };
 
         function RefreshFile() {
             if (cmbFolders.value == NOTHING)

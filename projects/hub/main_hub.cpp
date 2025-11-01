@@ -152,11 +152,13 @@ void startWebServer()
         auto dir = req->arg("dir");
         req->send(200, "text/plain", logger.removeFolder(dir) ? "1" : "0"); });
 
-    server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *req)
+    server.on("/getTime", HTTP_GET, [](AsyncWebServerRequest *req)
               { 
-        req->send(200, "text/plain", "");
-        //TODO if restart() doesn't work, try: wifiConfig(false); ... get current time, wifiConfig(true);
-        ESP.restart(); });
+                  //TODO if restart() doesn't work, try: wifiConfig(false); ... get current time, wifiConfig(true);
+                  // ESP.restart(); 
+                  // req->send(200, "text/plain", "");
+                  wifiConfig(false);
+        });
 
     server.begin();
 }

@@ -36,7 +36,7 @@ void ledOnDelay(int secs)
 #include <esp_now.h>
 #include <WiFi.h>
 // B uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
-uint8_t *mac = macEsp32BattConn;
+uint8_t *mac = macEsp32DevIpex;
 esp_now_peer_info_t peerInfo;
 // void OnDataSent(const uint8_t *mac, esp_now_send_status_t res)
 // {

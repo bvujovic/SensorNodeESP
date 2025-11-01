@@ -197,7 +197,8 @@ void setup()
 }
 
 // const ulong itvSendData = 10 * MINUTE - 0.01 * SECOND; // kasni
-const ulong itvSendData = 10 * MINUTE - 0.02 * SECOND; 
+// const ulong itvSendData = 10 * MINUTE - 0.02 * SECOND; // malo kasni
+const ulong itvSendData = 10 * MINUTE - 0.03 * SECOND; 
 bool newDataAvailable = false;
 
 void loop()

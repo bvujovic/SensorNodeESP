@@ -23,7 +23,15 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 - [ ] README.md: present server first and clients later. Change images where necessary.
 - [ ] Add more sensor nodes
     - [ ] BME680
+        - [x] Create sketch that sends data to the hub
+        - [ ] Use BSEC2 library and ESP32 C3 Pro Mini for the same functionality
+        - [ ] Improve current consumption
     - [ ] SCD30
+        - [x] Create test sketch that prints values on serial monitor
+        - [ ] Add code for calibration: fresh air once a week
+            - [ ] When sketch starts, if btn pressed - FRC, else - normal operation. Maybe One button is not needed.
+        - [ ] Add ESP-NOW communication: send data to the hub every 10 minutes
+        - [ ] Improve current consumption: ESP deep sleep, variable measurement interval for SCD30
     - [ ] ATtiny & HC-12
         - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?
         - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers
@@ -35,6 +43,9 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## Add new client routine
 - my_esp_now.h: in setPeers() add new setPeer() call
     - setPeer(): set parameters: mac address, sensor type, device
+- Increase length of peers array: peer_info peers[]
+- Add new members to arrays: StrSensorTypes[], SensorTypesComment[]
+- HTML file:...
 ...
 
 ## Links

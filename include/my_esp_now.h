@@ -10,6 +10,7 @@ const char *StrSensorTypes[] = {
     "Temp",
     "EnsDht",
     "BME680",
+    "SCD30",
 };
 
 const char *SensorTypesComment[] = {
@@ -19,6 +20,7 @@ const char *SensorTypesComment[] = {
     "Temperature: temp (C)",
     "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
     "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC",
+    "Air quality: temp (C), hum (%), CO2 (ppm)",
 };
 
 const char *StrDevices[] = {
@@ -68,7 +70,7 @@ struct peer_info
     Device device;
 };
 
-peer_info peers[2];               // ESP-NOW peers
+peer_info peers[3];               // ESP-NOW peers
 int cntPeers;                     // peers count
 int lenMillisCommand;             // length of (string) "millis" command
 peer_info *peerRespMillis = NULL; // send millis to this peer
@@ -98,7 +100,7 @@ void setPeers()
     // esp_now_add_peer(mac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
     setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::BME680, Device::ESP32DevKit);
-    setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::SCD30, Device::WemosExtAnt);
+    setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::SCD30, Device::WemosExtAnt);
     //* When adding more peers, don't forget to update size of peers[] array.
     addPeers();
 }
@@ -189,6 +191,14 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             sprintf(line, "%.2f", temp);
             // Serial.println(len);
             // Serial.println(temp);
+            logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
+        }
+        if( p->type == SensorType::SCD30)
+        {
+            AirData ad;
+            memcpy(&ad, incomingData, len);
+            sprintf(line, "%.1f;%u;%u", ad.temperature, ad.humidity, ad.ECO2);
+            Serial.println(line);
             logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
         }
     }
