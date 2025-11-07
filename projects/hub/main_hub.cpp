@@ -153,12 +153,26 @@ void startWebServer()
         req->send(200, "text/plain", logger.removeFolder(dir) ? "1" : "0"); });
 
     server.on("/getTime", HTTP_GET, [](AsyncWebServerRequest *req)
-              { 
-                  //TODO if restart() doesn't work, try: wifiConfig(false); ... get current time, wifiConfig(true);
-                  // ESP.restart(); 
-                  // req->send(200, "text/plain", "");
+              {
+                  // TODO rename this to /restart and remove printlines and maybe req->send
+                  req->send(200, "text/plain", "Time sync started");
+                  //   wifiConfig(false);
+                  //   Serial.println(WiFi.localIP());
+
+                  Serial.println("getTime");
+                  server.end();
+                  delay(1000);
                   wifiConfig(false);
-        });
+                  delay(1000);
+                  isTimeSet = false;
+                  msLastGetTime = 0;
+                  Serial.println(WiFi.localIP()[3]);
+                  configTime(3600, 0, "rs.pool.ntp.org");
+
+                  //   wifiConfig(true);
+
+                  //   ESP.restart();
+              });
 
     server.begin();
 }
@@ -295,6 +309,7 @@ void loop()
         {
             Serial.println(&ti, "getLocalTime: %H:%M:%S");
             isTimeSet = true;
+            server.begin();
         }
         else
             Serial.println("getLocalTime fail!");

@@ -20,7 +20,9 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ![Client: ATtiny85 (STX882...)](projects/attiny_stx882/docs/attiny_stx882_finished_water_detect.jpg)
 
 ## TODO
-- [ ] README.md: present server first and clients later. Change images where necessary.
+- [ ] README.md: Change images where necessary.
+- [ ] Hub:
+    - [ ] See some examples of ESP32 code that deals with time (summer/winter daylight, update/refresh time)
 - [ ] Add more sensor nodes
     - [ ] BME680
         - [x] Create sketch that sends data to the hub
@@ -28,24 +30,28 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
         - [ ] Improve current consumption
     - [ ] SCD30
         - [x] Create test sketch that prints values on serial monitor
-        - [ ] Add code for calibration: fresh air once a week
-            - [ ] When sketch starts, if btn pressed - FRC, else - normal operation. Maybe One button is not needed.
+        - [x] Add code for calibration: fresh air once a week (put device outside for e.g. 30 minutes)
+            - [x] When sketch starts, if btn pressed - FRC, else - normal operation.
         - [ ] Add ESP-NOW communication: send data to the hub every 10 minutes
+        - [ ] Code cleanup
         - [ ] Improve current consumption: ESP deep sleep, variable measurement interval for SCD30
     - [ ] ATtiny & HC-12
         - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?
         - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers
-- [ ] Improve web app interface
+- [ ] Improve web app interface (chart.js disapears, shrinks)
 - [ ] Add 5V buzzer (with transistor)
 - [ ] Check if it's possible for ESP8266 to get back a value from the hub (two-way communication) and then go to sleep.
     - [ ] If that's possible, write a code that returns how much (milli)seconds should client wait until next reporting to the hub.
+    - [ ] Maybe the solution for precise reporting by clients it for hub 
 
 ## Add new client routine
 - my_esp_now.h: in setPeers() add new setPeer() call
     - setPeer(): set parameters: mac address, sensor type, device
 - Increase length of peers array: peer_info peers[]
 - Add new members to arrays: StrSensorTypes[], SensorTypesComment[]
-- HTML file:...
+- index.html:
+    - CmbChartParamsChange(): adjusting chart for sensors with temp and hum
+    - lastChartParam: add default property for new sensor
 ...
 
 ## Links

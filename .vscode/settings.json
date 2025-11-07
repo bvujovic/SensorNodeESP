@@ -12,6 +12,7 @@
         "algorithm": "cpp",
         "*.tcc": "cpp",
         "type_traits": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "sntp.h": "c"
     }
 }

@@ -8,8 +8,20 @@ SCD30 airSensor;
 
 #include "AirData.h"
 AirData airData;
-#define SECOND (1000)
+#define SECOND (1000UL)
 #define MINUTE (60 * SECOND)
+#define FRC_WAIT (10 * MINUTE) // Forced Recalibration wait time (before and after FRC command)
+
+#define ITV_SEND (10 * 60) // Data send interval in seconds
+#define ITV_WAIT (9 * 60)  // Waiting phase interval in seconds
+#define ITV_MEASURE (15)   // Measurement interval in seconds
+// #define ITV_SEND (60)   // Data send interval in seconds
+// #define ITV_WAIT (45)   // Waiting phase interval in seconds
+// #define ITV_MEASURE (5) // Measurement interval in seconds
+
+const byte pinButton = D6;
+// #include "OneButton.h" // mathertel/OneButton@^2.0.0
+// OneButton btn(pinButton, true); // Button to change display mode
 
 const byte pinLed = LED_BUILTIN;
 void ledOn(bool on) { digitalWrite(pinLed, !on); }
@@ -31,6 +43,23 @@ void ledOnRestart()
     ESP.restart();
 }
 
+void printTime()
+{
+    ulong ms = millis();
+    ulong totalSeconds = ms / 1000;
+    ulong minutes = (totalSeconds / 60) % 60;
+    ulong seconds = totalSeconds % 60;
+    Serial.print("Uptime: ");
+    if (minutes < 10)
+        Serial.print('0');
+    Serial.print(minutes);
+    Serial.print(':');
+    if (seconds < 10)
+        Serial.print('0');
+    Serial.println(seconds);
+    Serial.printf("Measurement interval (seconds): %u\n", airSensor.getMeasurementInterval());
+}
+
 #define USE_ESP_NOW
 #ifdef USE_ESP_NOW
 #include "MacAddresses.h"
@@ -48,10 +77,7 @@ uint8_t *mac = macSoftEsp32DevIpex;
 
 int prevCO2 = 0;                       // Previous CO2 value
 float prevTemp = 0.0f, prevHum = 0.0f; // Previous temperature and humidity values
-
-#include "OneButton.h" // mathertel/OneButton@^2.0.0
-const byte pinButton = D6;
-OneButton btn(pinButton, true); // Button to change display mode
+ulong msSend = 0;                      // Last send time
 
 void printValues(uint16_t co2, float temp, float hum)
 {
@@ -64,7 +90,12 @@ void printValues(uint16_t co2, float temp, float hum)
     Serial.println(" %");
 }
 
-ulong msStartFrcCD = 0;
+enum Phase
+{
+    Wait,
+    Measure,
+};
+Phase phase;
 
 void setup()
 {
@@ -82,11 +113,43 @@ void setup()
     Serial.print("Auto calibration set to: ");
     Serial.println(airSensor.getAutoSelfCalibration());
     airSensor.setAltitudeCompensation(170); // Set altitude compensation to 170m
-    Serial.print("Altitude compensation set to: ");
+    Serial.print("Altitude compensation set to (meters): ");
     Serial.println(airSensor.getAltitudeCompensation());
-    airSensor.setMeasurementInterval(60);
-    Serial.print("Measurement interval set to: ");
+
+    // When sketch starts, if btn pressed - FRC, else - normal operation.
+    if (digitalRead(pinButton) == LOW) // button pressed -> FRC
+    {
+        ulong msStartFrc = millis(); // Start time for forced calibration
+        Serial.println("Button held on startup, starting forced recalibration with 425 ppm reference.");
+        // ledOn(true);
+        airSensor.setMeasurementInterval(ITV_MEASURE);
+        // LED is blinking before sending FRC command (10 minutes)
+        auto isLedOn = false;
+        while (millis() < msStartFrc + FRC_WAIT * MINUTE)
+        {
+            delay(1000);
+            ledOn(isLedOn = !isLedOn);
+        }
+        msStartFrc = millis();                       // Reset start time for FRC
+        airSensor.setForcedRecalibrationFactor(425); // Set forced recalibration factor to 425 ppm
+        Serial.println("Forced recalibration with 425 ppm reference command sent to sensor.");
+        // LED is ON after sending FRC command (10 minutes)
+        ledOn(true);
+        while (millis() < msStartFrc + FRC_WAIT * MINUTE)
+            delay(1000);
+        ledOn(false);
+    }
+    else
+        Serial.println("Normal startup, reading and sending values to the hub.");
+
+    // airSensor.setMeasurementInterval(ITV_MEASURE);
+    // airSensor.setMeasurementInterval(3 * 60); // Set measurement interval to 3 minutes for testing
+    phase = Wait;
+    airSensor.setMeasurementInterval(ITV_WAIT);
+    Serial.print("Measurement interval set to (seconds): ");
     Serial.println(airSensor.getMeasurementInterval());
+    msSend = millis();
+    printTime();
 
 #ifdef USE_ESP_NOW
     WiFi.mode(WIFI_STA);
@@ -120,83 +183,122 @@ void setup()
     //         displayMode = (DisplayMode)((int(displayMode) + 1) % int(MaxModes)); // Cycle through display modes
     //         printValues(prevCO2, prevTemp, prevHum);                            // Show previous CO2, temperature and humidity
     //     });
-    btn.attachLongPressStart(
-        []()
-        {
-            Serial.println("Button long pressed, toggling measurement interval...");
-            airSensor.setMeasurementInterval(airSensor.getMeasurementInterval() == 60 ? 5 : 60); // Toggle measurement interval
-            // display.showNumberDec(airSensor.getMeasurementInterval());                           // Show measurement interval on the display
-            Serial.print("Measurement interval set to: ");
-            Serial.println(airSensor.getMeasurementInterval());
-            delay(1000);                             // Wait for a second to let the user read the display
-            printValues(prevCO2, prevTemp, prevHum); // Show previous CO2, temperature and humidity
-        });
-    btn.attachDoubleClick(
-        []()
-        {
-            // delay(60000); // Wait for 60 seconds to let the sensor stabilize
-            msStartFrcCD = millis(); // Start time for forced calibration
-            Serial.println("Button double clicked, starting forced recalibration with 425 ppm reference in 20 minutes.");
-            // display.showNumberDecEx(0, 0b01000000, true); // Show 00:00 on the display to indicate forced recalibration
-            // airSensor.setForcedRecalibrationFactor(425); // Set forced recalibration factor to 425 ppm
-            // airSensor.setAutoSelfCalibration(false); // Optional: turn ASC off if you don't ventilate regularly
-            // Serial.println("Button double clicked, forced recalibration with 400 ppm reference.");
-            // display.showNumberDec(425); // Show 425 on the display to indicate forced recalibration
-            delay(1000); // Wait for a second to let the user read the display
-            airSensor.setMeasurementInterval(60);
-        });
+    // btn.attachLongPressStart(
+    //     []()
+    //     {
+    //         Serial.println("Button long pressed, toggling measurement interval...");
+    //         airSensor.setMeasurementInterval(airSensor.getMeasurementInterval() == 60 ? 5 : 60); // Toggle measurement interval
+    //         // display.showNumberDec(airSensor.getMeasurementInterval());                           // Show measurement interval on the display
+    //         Serial.print("Measurement interval set to: ");
+    //         Serial.println(airSensor.getMeasurementInterval());
+    //         delay(1000);                             // Wait for a second to let the user read the display
+    //         printValues(prevCO2, prevTemp, prevHum); // Show previous CO2, temperature and humidity
+    //     });
+    // btn.attachDoubleClick(
+    //     []()
+    //     {
+    //         // delay(60000); // Wait for 60 seconds to let the sensor stabilize
+    //         msStartFrcCD = millis(); // Start time for forced calibration
+    //         Serial.println("Button double clicked, starting forced recalibration with 425 ppm reference in 20 minutes.");
+    //         // display.showNumberDecEx(0, 0b01000000, true); // Show 00:00 on the display to indicate forced recalibration
+    //         // airSensor.setForcedRecalibrationFactor(425); // Set forced recalibration factor to 425 ppm
+    //         // airSensor.setAutoSelfCalibration(false); // Optional: turn ASC off if you don't ventilate regularly
+    //         // Serial.println("Button double clicked, forced recalibration with 400 ppm reference.");
+    //         // display.showNumberDec(425); // Show 425 on the display to indicate forced recalibration
+    //         delay(1000); // Wait for a second to let the user read the display
+    //         airSensor.setMeasurementInterval(60);
+    //     });
 }
-
-ulong ms = 0; // Variable to store the last time the sensor was checked
 
 void loop()
 {
-    if (millis() > ms + 1000)
+    if (phase == Wait)
+    {
+        if (millis() > msSend + (ITV_WAIT * 0.9) * SECOND)
+        {
+            phase = Measure;
+            Serial.println(" * Measurement phase");
+            airSensor.setMeasurementInterval(ITV_MEASURE);
+            printTime();
+        }
+    }
+    else if (phase == Measure)
     {
         if (airSensor.dataAvailable())
         {
             uint16_t co2 = airSensor.getCO2();
             float temp = airSensor.getTemperature();
             float hum = airSensor.getHumidity();
-            if (msStartFrcCD > 0)
-            {
-                Serial.println("Forced recalibration in progress...");
-                // display.showNumberDec(1111);
-                delay(1000); // Show 1111 on the display to indicate forced recalibration in progress
-            }
             printValues(co2, temp, hum);
-#ifdef USE_ESP_NOW
-            if (co2 == 0)
-                Serial.println("CO2 is zero, skipping ESP-NOW send.");
-            {
-                Serial.println("Sending data via ESP-NOW");
-                airData.ECO2 = co2;
-                airData.temperature = temp;
-                airData.humidity = hum + 0.5f; // Round humidity
-                auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
-                printf("Send res: 0x%X\n", res);
-                if (res != 0)
-                    ledOnDelay(10);
-                // ESP.deepSleep(10 * (MIN + SEC) * 1000);
-            }
-#endif
             prevCO2 = co2;
             prevTemp = temp;
             prevHum = hum;
+            printTime();
         }
-        ms = millis();
+        // send data every ITV_SEND milliseconds, if CO2 is valid (not zero)
+        if (millis() > msSend + ITV_SEND * SECOND)
+        {
+            if (digitalRead(pinButton) == LOW) // button pressed -> skip send
+                ledOn(true);                   // LED will be turned ON while button is pressed (waiting to send data)
+            else
+            {
+                ledOn(false);
+                Serial.println(" *** Sending data...");
+                printValues(prevCO2, prevTemp, prevHum);
+#ifdef USE_ESP_NOW
+                if (prevCO2 != 0)
+                {
+                    Serial.println("Sending data via ESP-NOW");
+                    airData.ECO2 = prevCO2;
+                    airData.temperature = prevTemp;
+                    airData.humidity = prevHum + 0.5f; // Round humidity
+                    auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+                    printf("Send res: 0x%X\n", res);
+                    if (res != 0)
+                        ledOnDelay(10);
+                }
+                else
+                    Serial.println("CO2 is zero, skipping ESP-NOW send.");
+#endif
+                phase = Wait;
+                Serial.println(" * Wait phase");
+                airSensor.setMeasurementInterval(ITV_WAIT);
+                msSend = millis();
+                printTime();
+            }
+        }
     }
-
-    if (msStartFrcCD > 0 && millis() >= msStartFrcCD + 20UL * 60 * 1000) // 20 minutes passed
-    {
-        msStartFrcCD = 0;                            // Reset the start time
-        airSensor.setForcedRecalibrationFactor(425); // Set forced recalibration factor to 425 ppm
-        airSensor.setAutoSelfCalibration(false);     // Optional: turn ASC off if you don't ventilate regularly
-        Serial.println("Forced recalibration with 425 ppm reference completed.");
-        // display.showNumberDec(425); // Show 425 on the display to indicate forced recalibration
-        delay(1000); // Wait for a second to let the user read the display
-    }
-
-    btn.tick();
-    delay(10);
+    /*
+        // if (millis() > ms + 1000)
+        if (millis() > msSend + 3 * MINUTE)
+        {
+            if (airSensor.dataAvailable())
+            {
+                uint16_t co2 = airSensor.getCO2();
+                float temp = airSensor.getTemperature();
+                float hum = airSensor.getHumidity();
+                printValues(co2, temp, hum);
+    #ifdef USE_ESP_NOW
+                if (co2 == 0)
+                    Serial.println("CO2 is zero, skipping ESP-NOW send.");
+                {
+                    Serial.println("Sending data via ESP-NOW");
+                    airData.ECO2 = co2;
+                    airData.temperature = temp;
+                    airData.humidity = hum + 0.5f; // Round humidity
+                    auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+                    printf("Send res: 0x%X\n", res);
+                    if (res != 0)
+                        ledOnDelay(10);
+                    // ESP.deepSleep(10 * (MIN + SEC) * 1000);
+                }
+    #endif
+                prevCO2 = co2;
+                prevTemp = temp;
+                prevHum = hum;
+            }
+            ms = millis();
+        }
+            */
+    delay(20);
 }
