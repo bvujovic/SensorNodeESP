@@ -21,14 +21,36 @@ MyBlinky buzzer(18);
 
 char line[80]; // general purpose char array - formating data
 #include "my_esp_now.h"
-extern "C"
-{
-#include "lwip/apps/sntp.h"
-}
+// extern "C"
+// {
+// #include "lwip/apps/sntp.h"
+// }
+#define SECOND (1000UL)
+#define MY_NTP_SERVER "rs.pool.ntp.org"
+// https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+// Europe/Belgrade -> CET-1CEST,M3.5.0,M10.5.0/3
+#define MY_TZ "CET-1CEST,M3.5.0/02,M10.5.0/03"
 #include "time.h"
+#include "esp_sntp.h"
+time_t now; // this are the seconds since Epoch (1970) - UTC
 struct tm ti;
-ulong msLastGetTime = 0;
-bool isTimeSet = false;
+// ulong msLastGetTime = 0;
+// bool isTimeSet = false;
+
+void getTime()
+{
+    time(&now);             // read the current time
+    localtime_r(&now, &ti); // update the structure tm with the current time
+}
+
+ulong msLastTimeSync = 0;
+// callback function to show when NTP was synchronized
+void cbSyncTime(struct timeval *tv)
+{
+    // Serial.println(F(" *** NTP time synched! *** "));
+    msLastTimeSync = millis();
+    // Serial.println(msLastTimeSync);
+}
 
 #include "TimeWatcher.h"
 TimeWatcher tw(ti);
@@ -152,36 +174,19 @@ void startWebServer()
         auto dir = req->arg("dir");
         req->send(200, "text/plain", logger.removeFolder(dir) ? "1" : "0"); });
 
-    server.on("/getTime", HTTP_GET, [](AsyncWebServerRequest *req)
+    server.on("/time", HTTP_GET, [](AsyncWebServerRequest *req)
               {
-                  // TODO rename this to /restart and remove printlines and maybe req->send
-                  req->send(200, "text/plain", "Time sync started");
-                  //   wifiConfig(false);
-                  //   Serial.println(WiFi.localIP());
+        getLocalTime(&ti);
+        strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
+        req->send(200, "text/plain", line); });
 
-                  Serial.println("getTime");
-                  server.end();
-                  delay(1000);
-                  wifiConfig(false);
-                  delay(1000);
-                  isTimeSet = false;
-                  msLastGetTime = 0;
-                  Serial.println(WiFi.localIP()[3]);
-                  configTime(3600, 0, "rs.pool.ntp.org");
-
-                  //   wifiConfig(true);
-
-                  //   ESP.restart();
-              });
+    server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *req)
+              {
+        req->send(200, "text/plain", "Reset started");
+        ESP.restart(); });
 
     server.begin();
 }
-
-// B
-//  void timeSyncCallback(struct timeval *tv)
-//  {
-//      Serial.println("Time synchronized via NTP.");
-//  }
 
 void setup()
 {
@@ -196,6 +201,7 @@ void setup()
     // WiFi
     WiFi.mode(WIFI_AP_STA); // ESP32 has to be in this mode to be able to use ESP-NOW and Web Server at the same time
     //? WiFi.persistent(false);
+    WiFi.softAP("ESP_Hub", "SomeDumbPa$$22", 1, true);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
     Serial.print("Connecting to WiFi");
     while (WiFi.status() != WL_CONNECTED)
@@ -204,16 +210,31 @@ void setup()
         delay(1000);
     }
     Serial.println(" connected.");
-    Serial.print("ESP32 Web Server's IP address: ");
-    Serial.println(WiFi.localIP());
+    // Serial.print("ESP32 Web Server's IP address: ");
+    // Serial.println(WiFi.localIP());
     // B
     //  sntp_set_sync_interval(86400000);  // once per day
     //  sntp_set_time_sync_notification_cb(timeSyncCallback);
     // configTime(3600, 3600, "rs.pool.ntp.org");
-    configTime(3600, 0, "rs.pool.ntp.org");
     // configTime("CET-1CEST,M3.last.0/2,M10.last.0/3", "rs.pool.ntp.org");
+    // configTime(3600, 0, "rs.pool.ntp.org");
 
+    // sntp_set_sync_interval(1 * 60 * SECOND); // sync every minute
+    sntp_set_sync_interval(7 * 24 * 60 * 60 * SECOND); // sync every week
+    sntp_set_time_sync_notification_cb(cbSyncTime);
+    configTime(0, 0, MY_NTP_SERVER); // 0, 0 because we will use TZ in the next line
+    setenv("TZ", MY_TZ, 1);          // Set environment variable with your time zone
+    tzset();
+    Serial.print("Waiting for NTP time sync: ");
+    while (msLastTimeSync == 0)
+        delay(200);
+    Serial.println("Time synchronized!");
+    // Serial.println(msLastTimeSync);
+
+    wifiConfig(true);
     startWebServer();
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
 
     // ESP-NOW
     if (esp_now_init() != ESP_OK)
@@ -286,32 +307,37 @@ void loop()
         peerRespMillis = NULL;
     }
 
-    if (isTimeSet)
-    {
-        if (WiFi.localIP()[3] == lastIpNumber) // if time and IP address are set...
-        {
-            getLocalTime(&ti);
-            tw.buzzIN();
-        }
-        else
-        {
-            // set up IP address after current date/time is retrieved
-            wifiConfig(true);
-            Serial.println(WiFi.localIP());
-            // logger.add("HUB", "HUB", "got time");
-        }
-    }
-    else if (millis() > msLastGetTime + 1000)
-    // current time test
-    {
-        msLastGetTime = millis();
-        if (getLocalTime(&ti))
-        {
-            Serial.println(&ti, "getLocalTime: %H:%M:%S");
-            isTimeSet = true;
-            server.begin();
-        }
-        else
-            Serial.println("getLocalTime fail!");
-    }
+    // if (isTimeSet)
+    // {
+    //     if (WiFi.localIP()[3] == lastIpNumber) // if time and IP address are set...
+    //     {
+    //         getLocalTime(&ti);
+    //         tw.buzzIN();
+    //     }
+    //     else
+    //     {
+    //         // set up IP address after current date/time is retrieved
+    //         wifiConfig(true);
+    //         Serial.println(WiFi.localIP());
+    //         // logger.add("HUB", "HUB", "got time");
+    //     }
+    // }
+    // else if (millis() > msLastGetTime + 1000)
+    // // current time test
+    // {
+    //     msLastGetTime = millis();
+    //     if (getLocalTime(&ti))
+    //     {
+    //         Serial.println(&ti, "getLocalTime: %H:%M:%S");
+    //         isTimeSet = true;
+    //         server.begin();
+    //     }
+    //     else
+    //         Serial.println("getLocalTime fail!");
+    // }
+
+    getLocalTime(&ti);
+    tw.buzzIN();
+
+    delay(10);
 }

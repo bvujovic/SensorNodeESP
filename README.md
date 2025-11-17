@@ -22,7 +22,9 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## TODO
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
-    - [ ] See some examples of ESP32 code that deals with time (summer/winter daylight, update/refresh time)
+    - [x] See some examples of ESP32 code that deals with time (summer/winter daylight, update/refresh time)
+    - [x] index.html: scd30 is the default sensor (type), xEco link added
+    - [x] Hide WiFi network
 - [ ] Add more sensor nodes
     - [ ] ATtiny & HC-12
         - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?

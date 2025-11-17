@@ -74,7 +74,7 @@
 
         .linkIcon {
             width: 16px;
-            margin-right: 8px;
+            margin-right: 12px;
         }
 
         canvas#myCanvas {
@@ -241,8 +241,10 @@
                     cmbSensors.appendChild(CreateOption(NOTHING, NOTHING));
                     for (const s of sensors)
                         cmbSensors.appendChild(CreateOption(s, s));
-                    if (selectedSensor == NOTHING && sensors.includes('EnsDht'))
-                        selectedSensor = 'EnsDht';
+                    // if (selectedSensor == NOTHING && sensors.includes('EnsDht'))
+                    //     selectedSensor = 'EnsDht';
+                    if (selectedSensor == NOTHING && sensors.includes('SCD30'))
+                        selectedSensor = 'SCD30';
                     cmbSensors.value = selectedSensor;
                     CmbSensorsChange();
                 }
@@ -547,17 +549,19 @@
 
     <h2>Links</h2>
     <div class="segment">
-        <img src="img/iq_air_16.png" class="linkIcon" />
-        <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">IQ Air - Banovo Brdo</a> <br>
-        <img src="img/rhmz.ico" class="linkIcon" />
-        <a href="https://www.hidmet.gov.rs/latin/prognoza/stanica.php?mp_id=13274&nor=da">RHMZ - Beograd, 5 dana</a>
-        <br>
-        <img src="img/google_16.png" class="linkIcon" />
-        <a href="https://www.google.com/search?q=vreme+banovo+brdo">Weather - Banovo Brdo</a> <br>
-        <img src="img/google_16.png" class="linkIcon" />
-        <a href="https://www.google.com/search?q=vreme+umka">Weather - Umka</a> <br>
-        <img src="img/google_16.png" class="linkIcon" />
-        <a href="https://www.google.com/search?q=vreme+vranić">Weather - Vranić</a> <br>
+        
+        <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">
+            <img src="img/iq_air_16.png" class="linkIcon" />IQ Air - Banovo Brdo</a><br>
+        <a href="https://www.hidmet.gov.rs/latin/prognoza/stanica.php?mp_id=13274&nor=da">
+            <img src="img/rhmz.ico" class="linkIcon" />RHMZ - Beograd, 5 dana</a><br>
+        <a href="https://xeco.info/xeco/vazduh/Beograd%20%C4%8Cukarica-Kraljice%20Katarine-1000012">
+            <img src="img/xeco-blue-72.png" class="linkIcon" />xEco - Čukarica, KK</a><br>
+        <a href="https://www.google.com/search?q=vreme+banovo+brdo">
+            <img src="img/google_16.png" class="linkIcon" />Weather - Banovo Brdo</a><br>
+        <a href="https://www.google.com/search?q=vreme+umka">
+            <img src="img/google_16.png" class="linkIcon" />Weather - Umka</a><br>
+        <a href="https://www.google.com/search?q=vreme+vranić">
+            <img src="img/google_16.png" class="linkIcon" />Weather - Vranić</a><br>
     </div>
 
     <div style="margin: 20px 0;">
