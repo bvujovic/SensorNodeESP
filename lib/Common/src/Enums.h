@@ -32,7 +32,7 @@ enum SensorType
 enum Device
 {
     UndefinedDevice,
-    TestNodeMCU,
+    ESP8266NodeMCU,
     WemosExtAnt,
     Wemos1,
     ESP32DevKit,

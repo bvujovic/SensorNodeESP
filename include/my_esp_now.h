@@ -25,10 +25,10 @@ const char *SensorTypesComment[] = {
 
 const char *StrDevices[] = {
     "Undefined",
-    "TestNodeMCU",
+    "ESP8266 NodeMCU",
     "WemosExtAnt",
     "ESP8266 Wemos 01",
-    "ESP32DevKit",
+    "ESP32 DevKit",
 };
 
 struct Notification
@@ -70,10 +70,16 @@ struct peer_info
     Device device;
 };
 
-peer_info peers[3];               // ESP-NOW peers
-int cntPeers;                     // peers count
-int lenMillisCommand;             // length of (string) "millis" command
+peer_info peers[4]; // ESP-NOW peers
+int cntPeers;       // peers count
+
+#define CMD_MILLIS ("millis")
+int lenCmdMillis;                 // length of (string) "millis" command
 peer_info *peerRespMillis = NULL; // send millis to this peer
+#define CMD_TIME ("time")
+int lenCmdTime;                 // length of (string) "time" command
+// peer_info *peerRespTime = NULL; // send time to this peer
+// TODO this should be a class: CMD, lenCmd, peerResp
 
 void printMAC(const uint8_t *mac);
 void addPeers();
@@ -89,7 +95,8 @@ void setPeer(peer_info *pi, uint8_t *mac, SensorType type, Device device)
 
 void setPeers()
 {
-    lenMillisCommand = strlen("millis");
+    lenCmdMillis = strlen(CMD_MILLIS);
+    lenCmdTime = strlen(CMD_TIME);
     // cntPeers = sizeof(peers) / sizeof(esp_now_peer_info);
     cntPeers = 0;
     // memcpy(peers[0].peer_addr, macEsp32Dev, 6);
@@ -99,8 +106,9 @@ void setPeers()
     // uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
     // esp_now_add_peer(mac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
-    setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::BME680, Device::ESP32DevKit);
     setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::SCD30, Device::WemosExtAnt);
+    setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32
+    setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::UndefinedSensorType, Device::ESP8266NodeMCU); // test ESP32
     //* When adding more peers, don't forget to update size of peers[] array.
     addPeers();
 }
@@ -159,8 +167,31 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     if (p != NULL)
     {
         Serial.printf("Data received from %s @ %s\n", StrSensorTypes[p->type], StrDevices[p->device]);
-        if (len == lenMillisCommand && strncmp((const char *)incomingData, "millis", lenMillisCommand) == 0)
+
+        if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
             peerRespMillis = p;
+        // if (len == lenCmdTime && strncmp((const char *)incomingData, CMD_TIME, lenCmdTime) == 0)
+        //     peerRespTime = p;
+        // if (peerRespTime != NULL)
+        // {
+        //     // strcpy(line, "times");
+        //     getLocalTime(&ti);
+        //     strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
+        //     // Serial.println(line);
+        //     esp_now_send(peerRespTime->peer_addr, (uint8_t *)line, strlen(line));
+        //     peerRespTime = NULL;
+        // }
+        if (len == lenCmdTime && strncmp((const char *)incomingData, CMD_TIME, lenCmdTime) == 0)
+        {
+            // strcpy(line, "times");
+            getLocalTime(&ti);
+            // strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
+            strftime(line, sizeof(line), "%H:%M:%S\n", &ti);
+            // Serial.println(line);
+            esp_now_send(p->peer_addr, (uint8_t *)line, strlen(line));
+            // p = NULL;
+            return;
+        }
 
         if (p->type == SensorType::EnsDht)
         {
@@ -176,24 +207,15 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
                 buzzer.blinkCritical();
             logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
         }
-        if (p->type == SensorType::BME680)
-        {
-            AirData ad;
-            memcpy(&ad, incomingData, len);
-            sprintf(line, "%.1f;%u;%u;%u;%u", ad.temperature, ad.humidity, ad.status, ad.ECO2, ad.TVOC);
-            Serial.println(line);
-            logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
-        }
-        if (p->type == SensorType::Temperature)
-        {
-            float temp;
-            memcpy(&temp, incomingData, len);
-            sprintf(line, "%.2f", temp);
-            // Serial.println(len);
-            // Serial.println(temp);
-            logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
-        }
-        if( p->type == SensorType::SCD30)
+        // if (p->type == SensorType::BME680)
+        // {
+        //     AirData ad;
+        //     memcpy(&ad, incomingData, len);
+        //     sprintf(line, "%.1f;%u;%u;%u;%u", ad.temperature, ad.humidity, ad.status, ad.ECO2, ad.TVOC);
+        //     Serial.println(line);
+        //     logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
+        // }
+        else if (p->type == SensorType::SCD30)
         {
             AirData ad;
             memcpy(&ad, incomingData, len);
@@ -201,6 +223,15 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             Serial.println(line);
             logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
         }
+        // else if (p->type == SensorType::Temperature)
+        // {
+        //     float temp;
+        //     memcpy(&temp, incomingData, len);
+        //     sprintf(line, "%.2f", temp);
+        //     // Serial.println(len);
+        //     // Serial.println(temp);
+        //     logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
+        // }
     }
     else
     {

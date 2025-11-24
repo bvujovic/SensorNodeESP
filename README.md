@@ -22,29 +22,32 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## TODO
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
-    - [x] See some examples of ESP32 code that deals with time (summer/winter daylight, update/refresh time)
-    - [x] index.html: scd30 is the default sensor (type), xEco link added
-    - [x] Hide WiFi network
-- [ ] Add more sensor nodes
-    - [ ] ATtiny & HC-12
-        - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?
-        - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers
-    - [ ] Microphone (noise levels)
+    - [x] Reset button
+    - [x] Auto reset every day on e.g. 22:22:22
+    - [x] Hide SSID
+    - [x] Status Info: heap and storage - display USED instead of FREE
+    - [x] my_esp_now.h: new command "time", new test device ESP8266NodeMCU
+- [ ] Clients:
+    - [ ] (WIP) Try this solution for precise reporting by clients: client will sleep for e.g. 9 minutes, and then asks hub for current time and then sends data based on that time.
+    - [ ] Add more sensor nodes
+        - [ ] ATtiny & HC-12
+            - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?
+            - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers
+        - [ ] Microphone (noise levels)
 - [ ] Improve web app interface (chart.js disapears, shrinks)
 - [ ] Add 5V buzzer (with transistor)
-- [ ] Check if it's possible for ESP8266 to get back a value from the hub (two-way communication) and then go to sleep.
-    - [ ] If that's possible, write a code that returns how much (milli)seconds should client wait until next reporting to the hub.
-    - [ ] Maybe the solution for precise reporting by clients it for client to sleep for e.g. 9 minutes, and then asks hub for current time and then sends data based on that time.
 
 ## Add new client routine
-- my_esp_now.h: in setPeers() add new setPeer() call
-    - setPeer(): set parameters: mac address, sensor type, device
-- Increase length of peers array: peer_info peers[]
-- Add new members to arrays: StrSensorTypes[], SensorTypesComment[]
+- my_esp_now.h:
+    - setPeers(): add new setPeer() call
+        - setPeer(): set parameters: mac address, sensor type, device
+    - Increase length of peers array: peer_info peers[]
+    - Add new members to arrays: StrSensorTypes[], SensorTypesComment[]
+    - OnDataRecv(): if (p->type == SensorType::...)
+- Enums.h: Add new members to SensorType, Device
 - index.html:
     - CmbChartParamsChange(): adjusting chart for sensors with temp and hum
     - lastChartParam: add default property for new sensor
-...
 
 ## Links
 

@@ -10,7 +10,9 @@
 #include <ESP8266WiFi.h>
 #endif
 
-uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
+#include "MacAddresses.h"
+// uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
+uint8_t *mac = macSoftEsp32DevIpex;
 bool sendSuccess = true;
 
 #ifdef ESP32
@@ -44,10 +46,14 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         memcpy(&msHub, incomingData, len);
         Serial.println(msHub);
     }
-    // char s[10];
-    // memcpy(s, incomingData, len);
-    // s[len] = 0;
-    // Serial.println(s);
+    char s[10];
+    memcpy(s, incomingData, len);
+    s[len] = 0;
+    Serial.println(s);
+// e.g.
+// Recv data length: 9
+// 16:25:01
+
     // ulong msThisRecv = atol(s);
     // Serial.println(msThisRecv - msLastRecv);
     // msLastRecv = msThisRecv;
@@ -88,7 +94,7 @@ void setup()
 #endif
 }
 
-char msg[] = "millis";
+char msg[] = "time";
 ulong msLastSend = 0;
 
 void loop()
@@ -101,7 +107,7 @@ void loop()
 
     // itoa(cnt++, msg, 10);
     // ultoa(millis(), msg, 10);
-    if (millis() > msLastSend + 3000)
+    if (millis() > msLastSend + 6000)
     {
         Serial.println(msLastSend);
         Serial.println(millis());

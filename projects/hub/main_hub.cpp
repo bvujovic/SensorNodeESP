@@ -19,12 +19,6 @@ const byte pinRadioIn = 19;
 #include "MyBlinky.h"
 MyBlinky buzzer(18);
 
-char line[80]; // general purpose char array - formating data
-#include "my_esp_now.h"
-// extern "C"
-// {
-// #include "lwip/apps/sntp.h"
-// }
 #define SECOND (1000UL)
 #define MY_NTP_SERVER "rs.pool.ntp.org"
 // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
@@ -34,6 +28,8 @@ char line[80]; // general purpose char array - formating data
 #include "esp_sntp.h"
 time_t now; // this are the seconds since Epoch (1970) - UTC
 struct tm ti;
+char line[80]; // general purpose char array - formating data
+#include "my_esp_now.h"
 // ulong msLastGetTime = 0;
 // bool isTimeSet = false;
 
@@ -159,13 +155,16 @@ void startWebServer()
               {
         getLocalTime(&ti);
         strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
-        auto percHeap = 100 * ESP.getFreeHeap() / ESP.getHeapSize();
+        auto heapSize = ESP.getHeapSize();
+        auto usedHeap = heapSize - ESP.getFreeHeap();
+        int percHeap = (100.0 * usedHeap / heapSize) + 0.5;
         auto storageTotal = LittleFS.totalBytes();
-        auto freeStorage = storageTotal - LittleFS.usedBytes();
-        auto percStorage = 100 * freeStorage / storageTotal;
+        // auto percStorage = 100 * LittleFS.usedBytes() / storageTotal;
+        auto usedStorage = LittleFS.usedBytes();
+        int percStorage = (100.0 * usedStorage / storageTotal) + 0.5;
         auto s = String("Current time: ") + line \
-        + "Heap: free " + (ESP.getFreeHeap() / 1024) + " KB / " + (ESP.getHeapSize() / 1024) + " KB total (" + percHeap + "%)\n" \
-        + "Storage: free " + (freeStorage / 1024) + " KB / " + (storageTotal / 1024) + " KB total (" + percStorage + "%)\n";
+        + "Heap: used " + (usedHeap / 1024) + " KB / " + (heapSize / 1024) + " KB total (" + percHeap + "%)\n" \
+        + "Storage: used " + (usedStorage / 1024) + " KB / " + (storageTotal / 1024) + " KB total (" + percStorage + "%)\n";
         s.replace("\n", "<br>");
         req->send(200, "text/plain", s); });
 
@@ -174,11 +173,11 @@ void startWebServer()
         auto dir = req->arg("dir");
         req->send(200, "text/plain", logger.removeFolder(dir) ? "1" : "0"); });
 
-    server.on("/time", HTTP_GET, [](AsyncWebServerRequest *req)
-              {
-        getLocalTime(&ti);
-        strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
-        req->send(200, "text/plain", line); });
+    // server.on("/time", HTTP_GET, [](AsyncWebServerRequest *req)
+    //           {
+    //     getLocalTime(&ti);
+    //     strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
+    //     req->send(200, "text/plain", line); });
 
     server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *req)
               {
@@ -201,7 +200,7 @@ void setup()
     // WiFi
     WiFi.mode(WIFI_AP_STA); // ESP32 has to be in this mode to be able to use ESP-NOW and Web Server at the same time
     //? WiFi.persistent(false);
-    WiFi.softAP("ESP_Hub", "SomeDumbPa$$22", 1, true);
+    WiFi.softAP("ESP_Hub", "SomeDumbPa$$22", 1, true); // hidden SSID
     WiFi.begin(WIFI_SSID, WIFI_PASS);
     Serial.print("Connecting to WiFi");
     while (WiFi.status() != WL_CONNECTED)
@@ -338,6 +337,8 @@ void loop()
 
     getLocalTime(&ti);
     tw.buzzIN();
+    if (ti.tm_hour == 22 && ti.tm_min == 22 && ti.tm_sec == 22)
+        ESP.restart();
 
     delay(10);
 }
