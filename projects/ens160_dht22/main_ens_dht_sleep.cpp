@@ -16,6 +16,31 @@ AirData airData;
 #define SEC (1000)
 #define MIN (60 * SEC)
 
+#define TIME_SLOT (10)   // (seconds) Data sending time slot after the n-minute mark (e.g. 5): 11:00:05, 11:10:05...
+#define ITV_SEND (10)    // (minutes) Send data every ITV_SEND minutes
+#define SLEEP_TIME (9.9) // (minutes) Time to sleep between data sends
+//* SLEEP_TIME should be (a little) less than ITV_SEND to wake up before next mark
+char cmdTime[] = "time";
+ulong msTimeToSendData = 0;
+
+int secondsToNextMark(const char *timeStr, int markMin)
+{
+    int h, m, s;
+    // Parse "HH:MM:SS"
+    if (sscanf(timeStr, "%d:%d:%d", &h, &m, &s) != 3)
+        return -1; // invalid input
+
+    // Total seconds from start of hour
+    int secNow = m * 60 + s;
+
+    // Next 10-minute mark (0, 10, 20, 30, 40, 50)
+    int nextMarkMin = ((m / markMin) + 1) * markMin;
+    int nextMarkSec = nextMarkMin * 60;
+
+    auto res = nextMarkSec - secNow;
+    return res != markMin * 60 ? res : 0;
+}
+
 const byte maxRetries = 3; // Max retries for getting data from sensors
 byte cntRetries = 0;       // Counter for retries
 bool shouldRetry = false;  // Flag to indicate if we should retry reading sensors
@@ -46,23 +71,35 @@ esp_now_peer_info_t peerInfo;
 #else
 #include <espnow.h>
 #include <ESP8266WiFi.h>
-// B uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x05};
-// uint8_t *mac = macSoftEsp32BattConn;
 uint8_t *mac = macSoftEsp32DevIpex;
 #endif
 // void OnDataSent(uint8_t *mac, uint8_t res)
 // {
 //     Serial.printf("Send status: 0x%X\n", res);
-//     // ledOn(sendStatus != 0);
 //     if (res != 0)
 //         ledOn_10sec();
-//     // {
-//     //     ledOn(true);
-//     //     delay(10 * SEC);
-//     // }
-//     // ledOn(false);
 // }
 #endif
+
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+    // if it's response to time command - e.g. 16:25:01
+    if (len == 8 && incomingData[2] == ':' && incomingData[5] == ':')
+    {
+        char s[10];
+        memcpy(s, incomingData, len);
+        s[len] = 0;
+        Serial.println(s);
+
+        auto secs = secondsToNextMark(s, ITV_SEND);
+        Serial.println(secs);
+        if (secs < 0)
+            Serial.println("Error!!!"); // TODO send data immediately or send time command again
+        else
+            // TODO should factor in time spent retrying reading sensors
+            msTimeToSendData = millis() + (secs + TIME_SLOT) * 1000UL;
+    }
+}
 
 void setup()
 {
@@ -76,11 +113,8 @@ void setup()
     while (NO_ERR != ens.begin())
     {
         Serial.println("Communication with ENS160 device failed, please check connection");
-        // ledOn(true);
-        // delay(10 * SEC);
         ledOnDelay(10);
     }
-    // ledOn(false);
     Serial.println("ENS160 found");
     ens.setPWRMode(ENS160_STANDARD_MODE);
     ens.setTempAndHum(25.0, 50.0); // Set default temperature and humidity
@@ -116,85 +150,106 @@ void setup()
             delay(100);
     }
 #else
+    auto res = esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+    Serial.printf("Register receiver code: %X\n", res);
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
     // esp_now_register_send_cb(OnDataSent);
-    auto res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+    res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
     printf("esp_now_add_peer res: 0x%X\n", res);
     if (res != 0)
         ledOnDelay(10);
+    else
+    {
+        byte timeRetries = 0;
+        do
+        {
+            res = esp_now_send(mac, (uint8_t *)&cmdTime, strlen(cmdTime));
+            printf("Initial esp_now_send res: 0x%X\n", res);
+            if (res != 0)
+                ledOnDelay(10);
+        } while (res != 0 && ++timeRetries < maxRetries);
+        if (timeRetries == maxRetries)
+            msTimeToSendData = 1; // Force sending data without waiting for time response
+    }
     // cntRetries++;
 #endif
-#endif
-    do
-    {
-        // DHT22
-        float hum = dht.readHumidity();
-        float temp = dht.readTemperature();
-        if (isnan(hum) || isnan(temp))
-        {
-            Serial.println("Failed to read from DHT sensor!");
-            ens.setTempAndHum(25.0, 50.0); // Set default temperature and humidity
-            airData.temperature = 0;
-            airData.humidity = 0;
-            shouldRetry = true;
-        }
-        if (hum > 100)
-            shouldRetry = true;
-        airData.temperature = temp;
-        airData.humidity = (int)(hum + 0.5); // Round to nearest integer
-        Serial.print("Temp: ");
-        Serial.print(airData.temperature);
-        Serial.print(", Hum: ");
-        Serial.print(airData.humidity);
-        Serial.println("% rH");
-
-        ens.setTempAndHum(temp, hum); // Set temperature and humidity for ENS160
-        // ENS160
-        airData.status = ens.getENS160Status();
-        airData.AQI = ens.getAQI();
-        airData.TVOC = ens.getTVOC();
-        airData.ECO2 = ens.getECO2();
-        Serial.print("ENS160 status: ");
-        Serial.print(airData.status);
-        Serial.print(",  CO2 equivalent: ");
-        Serial.print(airData.ECO2);
-        Serial.print(" ppm, TVOC: ");
-        Serial.print(airData.TVOC);
-        Serial.print(", AQI: ");
-        Serial.println(airData.AQI);
-        if (airData.AQI == 0 || airData.status == 1)
-            shouldRetry = true;
-        if (shouldRetry)
-        {
-            cntRetries++;
-            Serial.printf("Retrying... (%d/%d)\n", cntRetries, maxRetries);
-            ledOnDelay(10);
-            if (airData.status == 1)
-                ledOnDelay(60); // If in warm-up phase, wait longer
-        }
-        // else
-        //     cntRetries = 0;
-    } while (shouldRetry && cntRetries < maxRetries);
-
-#ifdef USE_ESP_NOW
-    if (cntRetries < maxRetries)
-    {
-        Serial.println("Sending data via ESP-NOW");
-        res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
-        printf("Send res: 0x%X\n", res);
-        if (res != 0)
-            ledOnDelay(10);
-    }
-    // ESP.deepSleep(10 * (MIN + SEC) * 1000);
-    // ESP.deepSleep((10 * (MIN + SEC) - 0.8 * SEC) * 1000); // +0.238sec
-    // ESP.deepSleep((10 * (MIN + SEC) - 1 * SEC) * 1000); // -
-    // ESP.deepSleep((10 * (MIN + SEC) - 0.9 * SEC) * 1000); // -
-    ESP.deepSleep((10 * (MIN + SEC) - 0.87 * SEC) * 1000); 
-#else
-    ESP.deepSleep(10 * SEC * 1000);
 #endif
 }
 
 void loop()
 {
+    if (msTimeToSendData != 0 && millis() > msTimeToSendData)
+    {
+        do
+        {
+            shouldRetry = false;
+            // DHT22
+            float hum = dht.readHumidity();
+            float temp = dht.readTemperature();
+            if (isnan(hum) || isnan(temp))
+            {
+                Serial.println("Failed to read from DHT sensor!");
+                ens.setTempAndHum(25.0, 50.0); // Set default temperature and humidity
+                airData.temperature = 0;
+                airData.humidity = 0;
+                shouldRetry = true;
+            }
+            if (hum > 100)
+                shouldRetry = true;
+            airData.temperature = temp;
+            airData.humidity = (int)(hum + 0.5); // Round to nearest integer
+            Serial.print("Temp: ");
+            Serial.print(airData.temperature);
+            Serial.print(", Hum: ");
+            Serial.print(airData.humidity);
+            Serial.println("% rH");
+
+            ens.setTempAndHum(temp, hum); // Set temperature and humidity for ENS160
+            // ENS160
+            airData.status = ens.getENS160Status();
+            airData.AQI = ens.getAQI();
+            airData.TVOC = ens.getTVOC();
+            airData.ECO2 = ens.getECO2();
+            Serial.print("ENS160 status: ");
+            Serial.print(airData.status);
+            Serial.print(",  CO2 equivalent: ");
+            Serial.print(airData.ECO2);
+            Serial.print(" ppm, TVOC: ");
+            Serial.print(airData.TVOC);
+            Serial.print(", AQI: ");
+            Serial.println(airData.AQI);
+            if (airData.AQI == 0 || airData.status == 1)
+                shouldRetry = true;
+            if (shouldRetry)
+            {
+                cntRetries++;
+                Serial.printf("Retrying... (%d/%d)\n", cntRetries, maxRetries);
+                ledOnDelay(10);
+                if (airData.status == 1)
+                    ledOnDelay(60); // If in warm-up phase, wait longer
+            }
+            // else
+            //     cntRetries = 0;
+        } while (shouldRetry && cntRetries < maxRetries);
+
+#ifdef USE_ESP_NOW
+        if (cntRetries < maxRetries)
+        {
+            Serial.println("Sending data via ESP-NOW");
+            auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+            printf("Send res: 0x%X\n", res);
+            if (res != 0)
+                ledOnDelay(10);
+        }
+        delay(100); // wait for send callback
+        ESP.deepSleep(1000000UL * 60 * SLEEP_TIME);
+#else
+        ESP.deepSleep(10 * SEC * 1000);
+#endif
+    }
+    else
+    {
+        // Serial.print('.');
+        delay(250);
+    }
 }

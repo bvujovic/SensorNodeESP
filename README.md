@@ -22,13 +22,9 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## TODO
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
-    - [x] Reset button
-    - [x] Auto reset every day on e.g. 22:22:22
-    - [x] Hide SSID
-    - [x] Status Info: heap and storage - display USED instead of FREE
-    - [x] my_esp_now.h: new command "time", new test device ESP8266NodeMCU
 - [ ] Clients:
     - [ ] (WIP) Try this solution for precise reporting by clients: client will sleep for e.g. 9 minutes, and then asks hub for current time and then sends data based on that time.
+        - [ ] If this soulution is successful, make a class and use it for other clients.
     - [ ] Add more sensor nodes
         - [ ] ATtiny & HC-12
             - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?

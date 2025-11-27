@@ -73,25 +73,6 @@ void startWebServer()
 {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *req)
               { req->send(LittleFS, "/ws/index.html", "text/html"); });
-    //     {
-    // auto response = req->beginResponse(LittleFS, "/ws/index.html", "text/html");
-    // response->addHeader("Cache-Control", "public, max-age=604800, immutable");
-    // req->send(response); });
-
-    // server.on("/img/nodes.png", HTTP_GET, [](AsyncWebServerRequest *req)
-    //           { req->send(LittleFS, "/ws/img/nodes.png", "image/png"); });
-    // server.on("/img/google_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
-    //           { req->send(LittleFS, "/ws/img/google_16.png", "image/png"); });
-    // server.on("/img/iq_air_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
-    //           { req->send(LittleFS, "/ws/img/iq_air_16.png", "image/png"); });
-    // server.on("/img/rhmz.ico", HTTP_GET, [](AsyncWebServerRequest *req)
-    //           { req->send(LittleFS, "/ws/img/rhmz.ico", "image/x-icon"); });
-
-    // server.on("/img/iq_air_16.png", HTTP_GET, [](AsyncWebServerRequest *req)
-    //           {
-    //     auto response = req->beginResponse(LittleFS, "/ws/img/iq_air_16.png", "image/png");
-    //     response->addHeader("Cache-Control", "public, max-age=31536000, immutable");
-    //     req->send(response); });
 
     server.serveStatic("/img/", LittleFS, "/ws/img/")
         .setCacheControl("max-age=604800, public, immutable"); // cache for 7 days
@@ -173,12 +154,6 @@ void startWebServer()
         auto dir = req->arg("dir");
         req->send(200, "text/plain", logger.removeFolder(dir) ? "1" : "0"); });
 
-    // server.on("/time", HTTP_GET, [](AsyncWebServerRequest *req)
-    //           {
-    //     getLocalTime(&ti);
-    //     strftime(line, sizeof(line), "%Y-%m-%d %H:%M:%S\n", &ti);
-    //     req->send(200, "text/plain", line); });
-
     server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *req)
               {
         req->send(200, "text/plain", "Reset started");
@@ -211,15 +186,8 @@ void setup()
     Serial.println(" connected.");
     // Serial.print("ESP32 Web Server's IP address: ");
     // Serial.println(WiFi.localIP());
-    // B
-    //  sntp_set_sync_interval(86400000);  // once per day
-    //  sntp_set_time_sync_notification_cb(timeSyncCallback);
-    // configTime(3600, 3600, "rs.pool.ntp.org");
-    // configTime("CET-1CEST,M3.last.0/2,M10.last.0/3", "rs.pool.ntp.org");
-    // configTime(3600, 0, "rs.pool.ntp.org");
 
-    // sntp_set_sync_interval(1 * 60 * SECOND); // sync every minute
-    sntp_set_sync_interval(7 * 24 * 60 * 60 * SECOND); // sync every week
+    sntp_set_sync_interval(7 * 24 * 60 * 60 * SECOND); // sync every week (daily auto reset will update time once a day)
     sntp_set_time_sync_notification_cb(cbSyncTime);
     configTime(0, 0, MY_NTP_SERVER); // 0, 0 because we will use TZ in the next line
     setenv("TZ", MY_TZ, 1);          // Set environment variable with your time zone
@@ -305,35 +273,6 @@ void loop()
         esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
         peerRespMillis = NULL;
     }
-
-    // if (isTimeSet)
-    // {
-    //     if (WiFi.localIP()[3] == lastIpNumber) // if time and IP address are set...
-    //     {
-    //         getLocalTime(&ti);
-    //         tw.buzzIN();
-    //     }
-    //     else
-    //     {
-    //         // set up IP address after current date/time is retrieved
-    //         wifiConfig(true);
-    //         Serial.println(WiFi.localIP());
-    //         // logger.add("HUB", "HUB", "got time");
-    //     }
-    // }
-    // else if (millis() > msLastGetTime + 1000)
-    // // current time test
-    // {
-    //     msLastGetTime = millis();
-    //     if (getLocalTime(&ti))
-    //     {
-    //         Serial.println(&ti, "getLocalTime: %H:%M:%S");
-    //         isTimeSet = true;
-    //         server.begin();
-    //     }
-    //     else
-    //         Serial.println("getLocalTime fail!");
-    // }
 
     getLocalTime(&ti);
     tw.buzzIN();
