@@ -1,6 +1,6 @@
 #pragma once
 
-// #include <Arduino.h>
+#include <Arduino.h>
 #include "Enums.h"
 
 typedef unsigned long ulong;

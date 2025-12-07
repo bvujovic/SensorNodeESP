@@ -18,10 +18,10 @@ AirData airData;
 
 #define TIME_SLOT (10)   // (seconds) Data sending time slot after the n-minute mark (e.g. 5): 11:00:05, 11:10:05...
 #define ITV_SEND (10)    // (minutes) Send data every ITV_SEND minutes
-#define SLEEP_TIME (9.9) // (minutes) Time to sleep between data sends
+#define SLEEP_TIME (9.8) // (minutes) Time to sleep between data sends
 //* SLEEP_TIME should be (a little) less than ITV_SEND to wake up before next mark
 char cmdTime[] = "time";
-ulong msTimeToSendData = 0;
+ulong msSendData = 0; // Time to send data from sensors
 
 int secondsToNextMark(const char *timeStr, int markMin)
 {
@@ -81,23 +81,53 @@ uint8_t *mac = macSoftEsp32DevIpex;
 // }
 #endif
 
+ulong msLastSendReqTime = 0; // Last time we sent time request
+
+void sendTimeRequest()
+{
+    int res;
+    byte timeRetries = 0;
+    do
+    {
+        msLastSendReqTime = millis();
+        printf("sendTimeRequest time: %lu\n", msLastSendReqTime);
+        res = esp_now_send(mac, (uint8_t *)&cmdTime, strlen(cmdTime));
+        printf("Initial esp_now_send res: 0x%X\n", res);
+        if (res != 0)
+            ledOnDelay(10);
+    } while (res != 0 && ++timeRetries < maxRetries);
+    if (timeRetries == maxRetries)
+        msSendData = 1; // Force sending data without waiting for time response
+}
+
+char buf[80];
+
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
+    printf("OnDataRecv time: %lu\n", millis());
+    int bufsize = sizeof(buf);
+    auto n = len < bufsize ? len : bufsize - 1;
+    memcpy(buf, incomingData, n);
+    buf[n] = 0;
+    printf("Received data: %s, len: %d\n", buf, len);
     // if it's response to time command - e.g. 16:25:01
     if (len == 8 && incomingData[2] == ':' && incomingData[5] == ':')
     {
         char s[10];
         memcpy(s, incomingData, len);
         s[len] = 0;
-        Serial.println(s);
+        // Serial.println(s);
 
         auto secs = secondsToNextMark(s, ITV_SEND);
-        Serial.println(secs);
+        printf("Seconds to next %d-minute mark: %d\n", ITV_SEND, secs);
         if (secs < 0)
-            Serial.println("Error!!!"); // TODO send data immediately or send time command again
+        {
+            Serial.println("Error!!!");
+            sendTimeRequest();
+        }
         else
             // TODO should factor in time spent retrying reading sensors
-            msTimeToSendData = millis() + (secs + TIME_SLOT) * 1000UL;
+            msSendData = millis() + (secs + TIME_SLOT) * 1000UL;
     }
 }
 
@@ -160,16 +190,7 @@ void setup()
         ledOnDelay(10);
     else
     {
-        byte timeRetries = 0;
-        do
-        {
-            res = esp_now_send(mac, (uint8_t *)&cmdTime, strlen(cmdTime));
-            printf("Initial esp_now_send res: 0x%X\n", res);
-            if (res != 0)
-                ledOnDelay(10);
-        } while (res != 0 && ++timeRetries < maxRetries);
-        if (timeRetries == maxRetries)
-            msTimeToSendData = 1; // Force sending data without waiting for time response
+        sendTimeRequest();
     }
     // cntRetries++;
 #endif
@@ -178,7 +199,7 @@ void setup()
 
 void loop()
 {
-    if (msTimeToSendData != 0 && millis() > msTimeToSendData)
+    if (msSendData != 0 && millis() > msSendData)
     {
         do
         {
@@ -248,8 +269,11 @@ void loop()
 #endif
     }
     else
-    {
-        // Serial.print('.');
         delay(250);
+
+    if (millis() - msLastSendReqTime > SEC && msSendData == 0)
+    {
+        Serial.println("No time response received, resending time request");
+        sendTimeRequest();
     }
 }

@@ -23,9 +23,14 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
 - [ ] Clients:
-    - [ ] (WIP) Try this solution for precise reporting by clients: client will sleep for e.g. 9 minutes, and then asks hub for current time and then sends data based on that time.
-        - [ ] If this soulution is successful, make a class and use it for other clients.
+    - [ ] SCD30:
+        - [ ] Check if pinButton is pressed before wait for response from airSensor (SCD30)
+        - [ ] Try to use TimeSlotSend class 
+    - [ ] (WIP) TimeSlotSend class - solution for sleep and timely reporting by clients: Client will sleep for e.g. 9 minutes, and then asks hub for current time and then sends data based on that time.
+        - [ ] Use this class in ens160_dht22 project.
+        - [ ] Should (re)trying to send data (when something is wrong) be a part of this class?
     - [ ] Add more sensor nodes
+        - [ ] Test current consumption in deep sleep and time it takes for ESP32 module to send msg via ESP-NOW for: ESP32-C3 Pro Mini and ESP32 w/ battery connector. Can those modules be used for PIR/water detection?
         - [ ] ATtiny & HC-12
             - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?
             - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers

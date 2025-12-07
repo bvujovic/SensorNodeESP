@@ -3,7 +3,8 @@
 void SrxParser::pulseCount(ulong pulse, ulong ms)
 {
     //TODO check if this interval should be changed (narrowed)
-    if (pulse > 4850 && pulse < 5000)
+    // if (pulse > 4850 && pulse < 5000)
+    if (pulse > 4900 && pulse < 5000) //! temporary change 
     {
         cntKitchenSinkWater++;
         msLastSignal = ms;
@@ -13,7 +14,8 @@ void SrxParser::pulseCount(ulong pulse, ulong ms)
 bool SrxParser::pulseCountOk(int cnt)
 {
     //TODO check if the value of cntExpectedPulses can be lowered - maybe system will work reliably with 5 pulses
-    return cnt >= cntExpectedPulses - 1 && cnt <= cntExpectedPulses + 1;
+    // return cnt >= cntExpectedPulses - 1 && cnt <= cntExpectedPulses + 1;
+    return cnt == 3; //! temporary change
 }
 
 SrxCommand SrxParser::returnCommand(SrxCommand cmdClick, ulong ms)
