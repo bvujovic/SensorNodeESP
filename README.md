@@ -22,6 +22,11 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## TODO
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
+    - [ ] Web App:
+        - [ ] Display cmbSensor value on btnRefresh click so if the web app didn't load completely - click on that button would load web app properly and not only sensor data
+        - [ ] ? Add https://xeco.info/xeco/vazduh/Beograd%20%C4%8Cukarica-Beogradskog%20Bataljona-1100127923 to Links section (location is not that near me :\ )
+        - [ ] Improve interface (chart.js disappears, shrinks)
+    - [ ] Add 5V buzzer (with transistor)
 - [ ] Clients:
     - [ ] SCD30:
         - [ ] Check if pinButton is pressed before wait for response from airSensor (SCD30)
@@ -30,13 +35,11 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
         - [ ] Use this class in ens160_dht22 project.
         - [ ] Should (re)trying to send data (when something is wrong) be a part of this class?
     - [ ] Add more sensor nodes
-        - [ ] Test current consumption in deep sleep and time it takes for ESP32 module to send msg via ESP-NOW for: ESP32-C3 Pro Mini and ESP32 w/ battery connector. Can those modules be used for PIR/water detection?
+        - [ ] (WIP) Test current consumption in deep sleep and time it takes for ESP32 module to send msg via ESP-NOW for: ESP32-C3 Pro Mini and ESP32 w/ battery connector. Can those modules be used for PIR/water detection? Try detecting water with wires and ESP32 w/ battery connector.
         - [ ] ATtiny & HC-12
             - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?
             - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers
         - [ ] Microphone (noise levels)
-- [ ] Improve web app interface (chart.js disapears, shrinks)
-- [ ] Add 5V buzzer (with transistor)
 
 ## Add new client routine
 - my_esp_now.h:

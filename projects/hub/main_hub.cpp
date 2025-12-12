@@ -279,5 +279,5 @@ void loop()
     if (ti.tm_hour == 22 && ti.tm_min == 22 && ti.tm_sec == 22)
         ESP.restart();
 
-    delay(10);
+    // delay(10); // removed because it interferes with pulseIn in SrxParser
 }

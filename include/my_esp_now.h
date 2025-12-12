@@ -29,6 +29,7 @@ const char *StrDevices[] = {
     "WemosExtAnt",
     "ESP8266 Wemos 01",
     "ESP32 DevKit",
+    "ESP32 BattConn",
 };
 
 struct Notification
@@ -70,14 +71,14 @@ struct peer_info
     Device device;
 };
 
-peer_info peers[4]; // ESP-NOW peers
+peer_info peers[5]; // ESP-NOW peers
 int cntPeers;       // peers count
 
 #define CMD_MILLIS ("millis")
 int lenCmdMillis;                 // length of (string) "millis" command
 peer_info *peerRespMillis = NULL; // send millis to this peer
 #define CMD_TIME ("time")
-int lenCmdTime;                 // length of (string) "time" command
+int lenCmdTime; // length of (string) "time" command
 // TODO this could be a class: CMD, lenCmd [peerResp]
 
 void printMAC(const uint8_t *mac);
@@ -100,7 +101,8 @@ void setPeers()
     setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::SCD30, Device::WemosExtAnt);
     setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
     setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32
-    setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::UndefinedSensorType, Device::ESP8266NodeMCU); // test ESP32
+    setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::UndefinedSensorType, Device::ESP8266NodeMCU); // test ESP8266
+    setPeer(peers + (cntPeers++), macEsp32BattConn, SensorType::SimpleEvent, Device::ESP32BattConn);          // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
     //* When adding more peers, don't forget to update size of peers[] array.
     addPeers();
 }
@@ -129,7 +131,7 @@ void addPeers()
 bool equalMACs(const uint8_t *mac1, const uint8_t *mac2)
 {
     for (size_t i = 0; i < 6; i++)
-        if (mac1[0] != mac2[0])
+        if (mac1[i] != mac2[i])
             return false;
     return true;
 }
@@ -160,6 +162,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     {
         Serial.printf("Data received from %s @ %s\n", StrSensorTypes[p->type], StrDevices[p->device]);
 
+        // response to ESP-NOW command/request: millis, time
         if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
             peerRespMillis = p;
         if (len == lenCmdTime && strncmp((const char *)incomingData, CMD_TIME, lenCmdTime) == 0)
@@ -169,7 +172,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             esp_now_send(p->peer_addr, (uint8_t *)line, strlen(line));
             return;
         }
-
+        // handling data from nodes (sensors)
         if (p->type == SensorType::EnsDht)
         {
             AirData ad;
@@ -191,6 +194,12 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             sprintf(line, "%.1f;%u;%u", ad.temperature, ad.humidity, ad.ECO2);
             Serial.println(line);
             logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
+        }
+        // temporary: testing simple events with ESP-NOW
+        else if (p->type == SensorType::SimpleEvent)
+        {
+            buzzer.blinkWarning();
+            logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
         }
     }
     else

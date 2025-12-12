@@ -11,9 +11,9 @@
 #include <ESP8266WiFi.h>
 #endif
 
-#define TIME_SLOT (5)    // seconds Data sending time slot after the 10-minute mark: 11:00:05, 11:10:05...
-#define MARK_MIN (2)     // minutes
-#define SLEEP_TIME (1.9) // minutes
+#define TIME_SLOT (7)    // seconds Data sending time slot after the 10-minute mark (e.g. 7): 11:00:07, 11:10:07...
+#define MARK_MIN (1)     // minutes
+#define SLEEP_TIME (0.8) // minutes
 //* sleep time should be less than MARK_MIN to wake up before next mark
 
 int secondsToNextMark(const char *timeStr, int markMin)
@@ -69,13 +69,14 @@ void OnDataSent(uint8_t *mac, uint8_t sendStatus)
 }
 #endif
 
-void printMAC(const uint8_t *mac)
-{
-    Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X \n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-}
+// void printMAC(const uint8_t *mac)
+// {
+//     Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X \n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+// }
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
+    printf("Received %d bytes from %02X:%02X:%02X:%02X:%02X:%02X: ", len, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     // if it's response to time command - e.g. 16:25:01
     if (len == 8 && incomingData[2] == ':' && incomingData[5] == ':')
     {
