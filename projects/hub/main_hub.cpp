@@ -29,6 +29,8 @@ MyBlinky buzzer(18);
 time_t now; // this are the seconds since Epoch (1970) - UTC
 struct tm ti;
 char line[80]; // general purpose char array - formating data
+#include "NotifyWhatsApp.h"
+bool isSimpleEventHandled = false;
 #include "my_esp_now.h"
 // ulong msLastGetTime = 0;
 // bool isTimeSet = false;
@@ -51,9 +53,7 @@ void cbSyncTime(struct timeval *tv)
 #include "TimeWatcher.h"
 TimeWatcher tw(ti);
 
-HardwareSerial HC12(2);
-
-#include "NotifyWhatsApp.h"
+// HardwareSerial HC12(2);
 
 const byte lastIpNumber = 80; // last byte of IP address for static IP assignment
 void wifiConfig(bool isStaticIP)
@@ -170,7 +170,7 @@ void setup()
     LittleFS.begin();
     logger.setTimeInfo(ti);
     tw.setBlinky(buzzer.getBlinky());
-    HC12.begin(4800, SERIAL_8N1, 16, 17); // RX, TX
+    // HC12.begin(4800, SERIAL_8N1, 16, 17); // RX, TX
 
     // WiFi
     WiFi.mode(WIFI_AP_STA); // ESP32 has to be in this mode to be able to use ESP-NOW and Web Server at the same time
@@ -272,6 +272,29 @@ void loop()
         ultoa(ms, line, 10);
         esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
         peerRespMillis = NULL;
+    }
+
+    if (isSimpleEventHandled)
+    {
+        isSimpleEventHandled = false;
+        Notification *notif = GetNotif(WaterDetected);
+        if (notif != NULL)
+        {
+            if (notif->wa_msg)
+            {
+                wifiConfig(false);
+                delay(3000);
+                // 💥Stan, kuhinja, sudopera:
+                // VISOK NIVO VODE U SUDOPERI 💦
+                NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
+                wifiConfig(true);
+            }
+            // if (notifications[WaterDetected].buzz)
+            if (notif->buzz)
+                buzzer.blinkCritical();
+        }
+        logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
+        // delay(1000); // to avoid multiple handling of simple event in a short time
     }
 
     getLocalTime(&ti);

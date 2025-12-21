@@ -22,20 +22,29 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## TODO
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
+    - [ ] Split Hub project into 2:
+        - Hub: connected to the internet, communication with clients is done via ESP-NOW. First, create alternative version for attiny_stx882 project (Water detection).
+        - Hub /wo internet: communication with clients is done via radio (HC-12, ~~SRX882~~...). Maybe it could have its own wireless network for web app access?
+            - Test if it's possible for 2 ESP32's to communicate /wo (known) WiFi network. If it's possible, create project with 2 simple parts: client (reacts on some simple event e.g. PIR) and server (beeps when ESP-NOW msg from client is received)
     - [ ] Web App:
-        - [ ] Display cmbSensor value on btnRefresh click so if the web app didn't load completely - click on that button would load web app properly and not only sensor data
-        - [ ] ? Add https://xeco.info/xeco/vazduh/Beograd%20%C4%8Cukarica-Beogradskog%20Bataljona-1100127923 to Links section (location is not that near me :\ )
+        - [x] Display cmbSensor value on btnRefresh click so if the web app didn't load completely - click on that button would load web app properly and not only sensor data
         - [ ] Improve interface (chart.js disappears, shrinks)
     - [ ] Add 5V buzzer (with transistor)
 - [ ] Clients:
     - [ ] SCD30:
         - [ ] Check if pinButton is pressed before wait for response from airSensor (SCD30)
+        - [ ] Check documantation for setting the right temperature \[offset\]
         - [ ] Try to use TimeSlotSend class 
     - [ ] (WIP) TimeSlotSend class - solution for sleep and timely reporting by clients: Client will sleep for e.g. 9 minutes, and then asks hub for current time and then sends data based on that time.
         - [ ] Use this class in ens160_dht22 project.
         - [ ] Should (re)trying to send data (when something is wrong) be a part of this class?
     - [ ] Add more sensor nodes
-        - [ ] (WIP) Test current consumption in deep sleep and time it takes for ESP32 module to send msg via ESP-NOW for: ESP32-C3 Pro Mini and ESP32 w/ battery connector. Can those modules be used for PIR/water detection? Try detecting water with wires and ESP32 w/ battery connector.
+        - [x] Test current consumption in deep sleep and time it takes for ESP32 module to send msg via ESP-NOW for: ESP32-C3 Pro Mini and ESP32 w/ battery connector. Can those modules be used for PIR/water detection? YES. Try detecting water with wires and ESP32 w/ battery connector.
+        - [ ] Replace attiny_stx882 with another device/project: ESP32 w/ battery connector that uses ESP-NOW for communication with the hub. Basis for this projects' code is in spikes/client-sleep_wake-on-pin.cpp
+            - [x] Prevent device from sending over and over again when test wires are in the water.
+            - [ ] (WIP) Test if device detects water after longer time of inactivity (1-10h hours after it's turned on).
+            - [ ] Test if device works with PIR sensor
+            - [ ] Create project folder: name, code, pictures, README.md
         - [ ] ATtiny & HC-12
             - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?
             - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers

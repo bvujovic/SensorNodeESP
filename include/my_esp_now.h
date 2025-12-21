@@ -102,7 +102,7 @@ void setPeers()
     setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
     setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32
     setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::UndefinedSensorType, Device::ESP8266NodeMCU); // test ESP8266
-    setPeer(peers + (cntPeers++), macEsp32BattConn, SensorType::SimpleEvent, Device::ESP32BattConn);          // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
+    setPeer(peers + (cntPeers++), macEsp32BattConnUsbC, SensorType::SimpleEvent, Device::ESP32BattConn);       // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
     //* When adding more peers, don't forget to update size of peers[] array.
     addPeers();
 }
@@ -198,13 +198,33 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         // temporary: testing simple events with ESP-NOW
         else if (p->type == SensorType::SimpleEvent)
         {
-            buzzer.blinkWarning();
-            logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
+            isSimpleEventHandled = true;
+            // Serial.println("Simple Event received!");
+            // Notification *notif = GetNotif(WaterDetected);
+            // if (notif != NULL)
+            // {
+            //     if (notif->wa_msg)
+            //     {
+            //         wifiConfig(false);
+            //         delay(3000);
+            //         // 💥Stan, kuhinja, sudopera:
+            //         // VISOK NIVO VODE U SUDOPERI 💦
+            //         NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
+            //         wifiConfig(true);
+            //     }
+            //     // if (notifications[WaterDetected].buzz)
+            //     if (notif->buzz)
+            //         buzzer.blinkCritical();
+            // }
+            // logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
         }
     }
     else
     {
-        Serial.println("ESP-NOW peer unknown.");
+        strncpy(line, (const char *)incomingData, len);
+        line[len] = '\0';
+        printf("Data received from UNKNOWN peer: %s\n", line);
         printMAC(mac);
+        logger.add("Unknown Type", "Unknown Device", line);
     }
 }

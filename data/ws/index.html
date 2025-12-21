@@ -349,12 +349,17 @@
         const lastChartParam = { EnsAht: 4, Temp: 0, EnsDht: 4, BME680: 4, SCD30: 2 };
 
         function RefreshFile() {
-            if (cmbFolders.value == NOTHING)
-                cmbFolders.focus();
-            else if (cmbFiles.value == NOTHING)
-                cmbFiles.focus();
-            else
-                CmbFilesChange();
+            // console.log("Folder: " + cmbFolders.value + ", File: " + cmbFiles.value + ", Sensor: " + cmbSensors.value);
+            if (cmbSensors.value == '' || cmbSensors.value == null)
+                location.reload();
+            else {
+                if (cmbFolders.value == NOTHING)
+                    cmbFolders.focus();
+                else if (cmbFiles.value == NOTHING)
+                    cmbFiles.focus();
+                else
+                    CmbFilesChange();
+            }
         }
 
         function StatusInfo() {
@@ -549,7 +554,6 @@
 
     <h2>Links</h2>
     <div class="segment">
-        
         <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">
             <img src="img/iq_air_16.png" class="linkIcon" />IQ Air - Banovo Brdo</a><br>
         <a href="https://www.hidmet.gov.rs/latin/prognoza/stanica.php?mp_id=13274&nor=da">

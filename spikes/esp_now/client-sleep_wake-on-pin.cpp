@@ -15,8 +15,9 @@
 #include <Arduino.h>
 #include "esp_sleep.h"
 
-const gpio_num_t WAKE_PIN = GPIO_NUM_4; // <- choose an RTC-capable pin
-const int LED_PIN = 2;                  // On-board LED (change if needed)
+// const gpio_num_t WAKE_PIN = GPIO_NUM_4; // <- choose an RTC-capable pin
+const gpio_num_t WAKE_PIN = GPIO_NUM_14; // <- choose an RTC-capable pin
+const int LED_PIN = 22;                 // On-board LED (change if needed)
 const int BLINK_COUNT = 3;
 const int BLINK_MS = 180;
 // Debounce / validation: sample this many times after wake
@@ -89,10 +90,11 @@ bool validateWakePin()
 void goToSleep()
 {
     // Reconfigure pin to proper input with pull resistor to avoid floating while sleeping
-    if (ACTIVE_LEVEL == 0)
-        pinMode((int)WAKE_PIN, INPUT_PULLUP);
-    else
-        pinMode((int)WAKE_PIN, INPUT_PULLDOWN);
+    // if (ACTIVE_LEVEL == 0)
+    //     pinMode((int)WAKE_PIN, INPUT_PULLUP);
+    // else
+    //     pinMode((int)WAKE_PIN, INPUT_PULLDOWN);
+    pinMode((int)WAKE_PIN, ACTIVE_LEVEL == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
 
     // Use EXT0 to wake from a single RTC pin. level param: 0 => wake on LOW, 1 => wake on HIGH
     esp_sleep_enable_ext0_wakeup(WAKE_PIN, ACTIVE_LEVEL);
@@ -111,10 +113,11 @@ void setup()
     Serial.printf("Wakeup reason: %d\n", (int)wakeReason);
 
     // Prepare the wake pin as input and internal pull (so it's not floating)
-    if (ACTIVE_LEVEL == 0)
-        pinMode((int)WAKE_PIN, INPUT_PULLUP);
-    else
-        pinMode((int)WAKE_PIN, INPUT_PULLDOWN);
+    // if (ACTIVE_LEVEL == 0)
+    //     pinMode((int)WAKE_PIN, INPUT_PULLUP);
+    // else
+    //     pinMode((int)WAKE_PIN, INPUT_PULLDOWN);
+    pinMode((int)WAKE_PIN, ACTIVE_LEVEL == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
 
     if (wakeReason == ESP_SLEEP_WAKEUP_EXT0)
     {
@@ -126,12 +129,12 @@ void setup()
             Serial.println("Wake appeared spurious/noisy -> going back to sleep.");
         else
         {
-            Serial.println("Valid wake detected. Blinking...");
-            blinkOnce();
+            Serial.println("Valid wake detected.");
+            // blinkOnce();
 
             WiFi.mode(WIFI_STA);
             // Serial.println(WiFi.macAddress());
-            if (esp_now_init() != 0)
+            if (esp_now_init() != ESP_OK)
             {
                 Serial.println("ESP NOW INIT FAIL");
                 goToSleep();
@@ -151,10 +154,15 @@ void setup()
             esp_now_register_send_cb(OnDataSent);
             esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
 #endif
+            //TODO change message, maybe send the same message 10 secondes after first one
             Serial.println("Sending initial message...");
             char str[] = "Hello ESP-Now";
             auto res = esp_now_send(mac, (uint8_t *)&str, strlen(str));
             Serial.printf("Send response: 0x%X\n", res);
+            Serial.println("Going to deep sleep forever...");
+            delay(100);
+            esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+            esp_deep_sleep_start();
         }
     }
     else
