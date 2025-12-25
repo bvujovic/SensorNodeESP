@@ -56,7 +56,9 @@ void ledOnDelay(int secs)
 
 #define USE_ESP_NOW
 #ifdef USE_ESP_NOW
-#include "MacAddresses.h"
+// #include "MacAddresses.h"
+uint8_t macSoftEsp32DevIpex[] = {0x24, 0x6F, 0x28, 0xAE, 0x5D, 0xD4};
+uint8_t macEsp32DevIpex[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
 #ifdef ESP32
 #include <esp_now.h>
 #include <WiFi.h>

@@ -6,7 +6,7 @@ int TimeSlotSend::secondsUntilNextSlot(int h, int m, int s) const
 {
     // Convert current time to total seconds from start of day
     int now = h * 3600 + m * 60 + s;
-    // Start searching from the next second (if exactly on the boundary, next slot)
+    // Start searching from the next second
     int target = now;
     while (true)
     {
@@ -18,7 +18,7 @@ int TimeSlotSend::secondsUntilNextSlot(int h, int m, int s) const
     }
 }
 
-void TimeSlotSend::onTimeStringRecv(const uint8_t *data, int len, ulong currentMillis)
+void TimeSlotSend::onTimeStringRecv(const uint8_t *data, int len, ulong currentMillis, bool printTime)
 {
     // printf("onTimeStringRecv: len=%d\n", len);
     if (len == 8 && data[2] == ':' && data[5] == ':') // if it's response to time command - e.g. 16:25:01
@@ -26,21 +26,16 @@ void TimeSlotSend::onTimeStringRecv(const uint8_t *data, int len, ulong currentM
         char str[10];
         memcpy(str, data, len);
         str[len] = 0;
-        // printf("Received time string: %s\n", str);
+        if (printTime)
+            printf("Received time string: %s\n", str);
 
         int h, m, s, secs = 0;
         if (sscanf(str, "%d:%d:%d", &h, &m, &s) != 3)
-            // return TSS_NOT_TIME_STRING;
             return;
         secs = secondsUntilNextSlot(h, m, s);
         // printf("Seconds to next %d-minute mark + %d sec: %d\n", getSlotMin(), getSlotSec(), secs);
         msTimeToSendData = currentMillis + secs * 1000UL - itvSensorRead;
         msTimeReqSent = 0; // reset time request sent
         isWakeUpTimeWrong = secs > secWakeUpTimeWrong;
-        // if (secs > secWakeUpTimeWrong) // device woke up too early or too late
-        //     isWakeUpTimeWrong = true;
-        // return secs;
     }
-    // else
-    //     return TSS_NOT_TIME_STRING;
 }

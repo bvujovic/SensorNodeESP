@@ -14,5 +14,5 @@ public:
 
     void blinkOk() { blinky->blink(500, 2); }
     void blinkWarning() { blinky->blink(250, 3); }
-    void blinkCritical() { blinky->patternedBlink("11.11.11.11.80", 333); }
+    void blinkCritical() { blinky->ledOn("11.11.11.11.80", 333); }
 };

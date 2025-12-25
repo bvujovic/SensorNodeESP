@@ -1,21 +1,17 @@
 #pragma once
 
-// #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
-// #define TSS_TIME_PARSE_ERROR (-1)
-// #define TSS_NOT_TIME_STRING (-1)
 
 /// @brief Solution for sleep and timely reporting by clients. Client will sleep for e.g. 9 minutes
 /// and then asks hub for current time and then sends data based on that time.
 class TimeSlotSend
 {
 private:
-    uint8_t slotMin;             // (minutes) Send data every SLOT_MIN minutes
-    uint8_t slotSec;             // (seconds) after the SLOT_MIN-minute mark (e.g. 5): 11:00:05, 11:10:05...
+    uint8_t slotMin;             // (minutes) Send data every slotMin minutes
+    uint8_t slotSec;             // (seconds) After the slotMin-minute mark (e.g. 5): 11:00:05, 11:10:05...
     int16_t secBeforeWakeup;     // Seconds to wake up before the slot time. Can be negative if device wakes up too early.
-    uint16_t itvSensorRead;      // (milliseconds) Time to read sensors before sending data
+    uint16_t itvSensorRead;      // (milliseconds) Time it takes to read data from sensors
     uint16_t secWakeUpTimeWrong; // (seconds) Threshold to consider wake-up time as off if more than this value to wait
 
     static const char cmdTime[];     // "time" command string
@@ -26,11 +22,11 @@ private:
 
 public:
     /// @brief Construct a new Time Slot Send object
-    /// @param slotMin 
-    /// @param slotSec 
-    /// @param secBeforeWakeup 
-    /// @param itvSensorRead 
-    /// @param secWakeUpTimeWrong 
+    /// @param slotMin Send data every slotMin minutes
+    /// @param slotSec Seconds after the slotMin-minute mark (e.g. 5): 11:00:05, 11:10:05...
+    /// @param secBeforeWakeup Seconds to wake up before the slot time. Can be negative if device wakes up too early.
+    /// @param itvSensorRead (milliseconds) Time it takes to read data from sensors
+    /// @param secWakeUpTimeWrong (seconds) Threshold to consider wake-up time as off if more than this value to wait
     TimeSlotSend(uint8_t slotMin, uint8_t slotSec, int16_t secBeforeWakeup, uint16_t itvSensorRead, uint16_t secWakeUpTimeWrong)
         : slotMin(slotMin), slotSec(slotSec), secBeforeWakeup(secBeforeWakeup), itvSensorRead(itvSensorRead), secWakeUpTimeWrong(secWakeUpTimeWrong)
     {
@@ -53,7 +49,7 @@ public:
     int secondsUntilNextSlot(int h, int m, int s) const;
 
     // TODO add param dt or dms to adjust msTimeToSendData (can be +/- and it's used if getting data from sensors takes long time)
-    void onTimeStringRecv(const uint8_t *data, int len, ulong currentMillis);
+    void onTimeStringRecv(const uint8_t *data, int len, ulong currentMillis, bool printTime);
     // calculate deep sleep time in microseconds
     uint64_t getDeepSleepTime() const
     {
@@ -71,7 +67,7 @@ public:
         resetWakeUpTimeWrong();
     }
     // TODO add maxRetries for limiting number of retries
-    //  check if time response is missing - (itvTimeRespWait) milliseconds passed
+    // check if time response is missing - (itvTimeRespWait) milliseconds passed
     bool isTimeRespMissing(ulong currentMillis)
     {
         if (msTimeReqSent == 0)
