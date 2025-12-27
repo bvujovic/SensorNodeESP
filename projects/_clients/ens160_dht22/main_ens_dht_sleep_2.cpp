@@ -1,4 +1,5 @@
 //* ESP8266 initializes module with ENS160 and DHT22 sensors, reads their values and sends them to the hub via ESP-NOW.
+//* This version uses TimeSlotSend class to get time synchronization from the hub and to manage deep sleep intervals.
 
 #include <DHT.h>      // lib_deps = adafruit/DHT sensor library@^1.4.6
 #define DHTPIN D5     // DHT sensor pin on ESP8266 D1 Mini Lite

@@ -22,6 +22,7 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## TODO
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
+    - [x] Create place (folder) for discontinued code that contains code that is not used anymore. Put there: attiny, hc12, stx882, bme680 projects.    
     - [ ] Split Hub project into 2:
         - Hub: connected to the internet, communication with clients is done via ESP-NOW. First, create alternative version for attiny_stx882 project (Water detection).
         - Hub /wo internet: communication with clients is done via radio (HC-12, ~~SRX882~~...). Maybe it could have its own wireless network for web app access?
@@ -34,17 +35,12 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
         - [ ] Check if pinButton is pressed before wait for response from airSensor (SCD30)
         - [ ] Check documantation for setting the right temperature \[offset\]
         - [ ] Try to use TimeSlotSend class 
-    - [ ] (WIP) TimeSlotSend class - solution for sleep and timely reporting by clients: Client will sleep for e.g. 9 minutes, and then asks hub for current time and then sends data based on that time.
-        - [x] Use this class in ens160_dht22 project.
     - [ ] Add more sensor nodes
-        - [ ] Replace attiny_stx882 with another device/project: ESP32 w/ battery connector that uses ESP-NOW for communication with the hub. Basis for this projects' code is in spikes/client-sleep_wake-on-pin.cpp
-            - [x] Test if device detects water after longer time of inactivity (1-10h hours after it's turned on).
+        - [ ] (WIP) esp32-wake-on-pin
+            - [ ] Try to generate random ID each time ESP wakes up
             - [ ] Resend message couple of seconds after the first one.
             - [ ] Test if device works with PIR sensor
             - [ ] Create project folder: name, code, pictures, README.md
-        - [ ] ATtiny & HC-12
-            - [ ] Is ESP32 hub impaired by calling HC12.available()? Does it interfere with buzzer?
-            - [ ] Remove ATtiny & STX882 from project if STX882 can't work precisely with ATtiny85 as with other microcontrollers
         - [ ] Microphone (noise levels)
 
 ## Add new client routine
