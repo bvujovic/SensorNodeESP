@@ -1,4 +1,4 @@
-//* ESP32 hub/web server: collects data via ESP-NOW and SRX882 from sensors,
+//* ESP32 hub/web server: collects data via ESP-NOW from sensors,
 //* stores it on LittleFS and displays it on 192.168.0.80 in a web browser.
 //* User can be notified with WhatsApp messages and/or buzzer.
 //* Current consumption: ~150mA
@@ -11,10 +11,6 @@ Logger logger;
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h> // lib_deps = esphome/ESPAsyncWebServer-esphome @ ^3.3.0
 AsyncWebServer server(80);
-
-#include <SrxParser.h>
-SrxParser srx;
-const byte pinRadioIn = 19;
 
 #include "MyBlinky.h"
 MyBlinky buzzer(18);
@@ -31,6 +27,7 @@ struct tm ti;
 char line[80]; // general purpose char array - formating data
 #include "NotifyWhatsApp.h"
 bool isSimpleEventHandled = false;
+#include "Enums.h"
 #include "my_esp_now.h"
 // ulong msLastGetTime = 0;
 // bool isTimeSet = false;
@@ -52,8 +49,6 @@ void cbSyncTime(struct timeval *tv)
 
 #include "TimeWatcher.h"
 TimeWatcher tw(ti);
-
-// HardwareSerial HC12(2);
 
 const byte lastIpNumber = 80; // last byte of IP address for static IP assignment
 void wifiConfig(bool isStaticIP)
@@ -166,11 +161,9 @@ void setup()
 {
     Serial.begin(115200);
     Serial.println("\n*** SensorNodeESP: HUB ***");
-    pinMode(pinRadioIn, INPUT);
     LittleFS.begin();
     logger.setTimeInfo(ti);
     tw.setBlinky(buzzer.getBlinky());
-    // HC12.begin(4800, SERIAL_8N1, 16, 17); // RX, TX
 
     // WiFi
     WiFi.mode(WIFI_AP_STA); // ESP32 has to be in this mode to be able to use ESP-NOW and Web Server at the same time
@@ -219,50 +212,6 @@ String message;
 
 void loop()
 {
-    // while (HC12.available())
-    // {
-    //     char c = HC12.read();
-    //     Serial.write(c); // forward everything to Serial Monitor
-    // }
-    // if (HC12.available())
-    // {
-    //     auto now = millis();
-    //     Serial.println('x');
-    //     // ledOn(true);
-    //     message = HC12.readStringUntil('\n');
-    //     // Serial.println("Time: " + String(millis() - now) + " ms");
-    //     Serial.println("Received: " + message);
-    //     // const char *msg = message.c_str();
-    //     // Serial.println(msg + 1); // skip first character
-    //     if (millis() - now < 100)
-    //         delay(100);
-    //     // ledOn(false);
-    //     Serial.println('z');
-    // }
-
-    // Parsing signals from simple sensors (PIR, water detection...) with SRX882
-    SrxCommand cmd = srx.refresh(pulseIn(pinRadioIn, LOW), millis());
-    if (cmd != None)
-    {
-        Serial.printf("SRX882: %d\n", cmd);
-        Notification *notif = GetNotif(WaterDetected);
-        if (notif != NULL)
-        {
-            if (notif->wa_msg)
-            {
-                wifiConfig(false);
-                delay(3000);
-                // 💥Stan, kuhinja, sudopera:
-                // VISOK NIVO VODE U SUDOPERI 💦
-                NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
-                wifiConfig(true);
-            }
-            // if (notifications[WaterDetected].buzz)
-            if (notif->buzz)
-                buzzer.blinkCritical();
-        }
-        logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
-    }
     // ESP-NOW: reply to "millis" command
     // TODO try to move this code to ESP-NOW:Receive method
     if (peerRespMillis != NULL)
@@ -302,5 +251,5 @@ void loop()
     if (ti.tm_hour == 22 && ti.tm_min == 22 && ti.tm_sec == 22)
         ESP.restart();
 
-    // delay(10); // removed because it interferes with pulseIn in SrxParser
+    delay(10);
 }

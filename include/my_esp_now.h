@@ -199,6 +199,16 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         else if (p->type == SensorType::SimpleEvent)
         {
             isSimpleEventHandled = true;
+
+            //TODO replace str with actual incoming data; if repeated msgId - discard msg...
+            //TODO ...save source (object&place/location) based on mac addr and msg so it will be processed in main
+            auto str = "123456;Something...";
+            uint32_t msgId;
+            char msgText[80];
+            auto res = sscanf(str, "%lu;%s", &msgId, &msgText);
+            printf("Parsed %d items: msgId=%lu, msgText='%s'\n", res, msgId, msgText);
+            // Parsed 2 items: msgId=123456, msgText='Something...'
+
             // Serial.println("Simple Event received!");
             // Notification *notif = GetNotif(WaterDetected);
             // if (notif != NULL)

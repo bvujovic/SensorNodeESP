@@ -22,7 +22,8 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 ## TODO
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
-    - [x] Create place (folder) for discontinued code that contains code that is not used anymore. Put there: attiny, hc12, stx882, bme680 projects.    
+    - [ ] Improve SimpleEvent handling in the loop() of main_hub.cpp. Handle ID of the message, log and send to WA message text, maybe change the name (SimpleEvent->???), try to add more clients (diff devices, messages...)
+    - [ ] (WIP, testing needed) Remove all references to hc12 and stx882 from code.
     - [ ] Split Hub project into 2:
         - Hub: connected to the internet, communication with clients is done via ESP-NOW. First, create alternative version for attiny_stx882 project (Water detection).
         - Hub /wo internet: communication with clients is done via radio (HC-12, ~~SRX882~~...). Maybe it could have its own wireless network for web app access?
@@ -31,16 +32,17 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
         - [ ] Improve interface (chart.js disappears, shrinks)
     - [ ] Add 5V buzzer (with transistor)
 - [ ] Clients:
-    - [ ] SCD30:
+    - [ ] (WIP) SCD30:
+        - [ ] Save to log file any indication of an error. Make sure it can be read easily.
         - [ ] Check if pinButton is pressed before wait for response from airSensor (SCD30)
         - [ ] Check documantation for setting the right temperature \[offset\]
         - [ ] Try to use TimeSlotSend class 
     - [ ] Add more sensor nodes
-        - [ ] (WIP) esp32-wake-on-pin
-            - [ ] Try to generate random ID each time ESP wakes up
-            - [ ] Resend message couple of seconds after the first one.
+        - [ ] (WIP, testing needed) esp32-wake-on-pin
+            - [x] Try to generate random ID each time ESP wakes up
+            - [x] Resend message couple of seconds after the first one.
             - [ ] Test if device works with PIR sensor
-            - [ ] Create project folder: name, code, pictures, README.md
+            - [x] Create project folder: name, code, pictures, README.md
         - [ ] Microphone (noise levels)
 
 ## Add new client routine

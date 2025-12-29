@@ -1,5 +1,7 @@
+//* ESP32 device that wakes on a pin event and sends an ESP-NOW message
+//* to a predefined MAC address and then goes back to deep sleep.
 /*
-    ESP32 Deep Sleep Wake on Pin Example
+    ESP32 Deep Sleep Wake on Pin
   NOTES:
   - Use an RTC-capable GPIO for WAKE_PIN. Common RTC GPIOs on many ESP32 boards:
       0, 2, 4, 12, 13, 14, 15, 25, 26, 27 (Check your exact module's datasheet if unsure.)
@@ -9,12 +11,11 @@
 #include <Arduino.h>
 #include "esp_sleep.h"
 
+#define MSG_TEXT ("Water detected!")
+const int maxRetries = 2;
+const int itvRepeatSendDelay = 4000;
 const gpio_num_t pinWake = GPIO_NUM_14; // <- choose an RTC-capable pin
 const byte pinLed = 22;                 // On-board LED (change if needed)
-// Debounce / validation: sample this many times after wake
-const int cntSamples = 8;
-const int itvSampleDelay = 8;
-const int itvRepeatSendDelay = 4000;
 
 // Choose the active level that should indicate a real wake.
 // For example, if you use INPUT_PULLUP and button to ground, ACTIVE_LEVEL should be 0 (LOW).
@@ -51,6 +52,9 @@ void blinks()
 
 bool validateWakePin()
 {
+    // Debounce / validation: sample this many times after wake
+    const int cntSamples = 8;
+    const int itvSampleDelay = 8;
     // Sample the pin cntSamples times with short delay and count matches to activeLevel.
     int matches = 0;
     for (int i = 0; i < cntSamples; ++i)
@@ -117,15 +121,20 @@ void setup()
                 Serial.println("Failed to add peer");
                 goToSleep();
             }
-            // TODO change message - possible format: ID (random num - same for repeat sends); message
-            Serial.println("Sending initial message...");
-            char str[] = "Hello ESP-Now";
-            // auto str = "Hello ESP-Now";
-            sendMessage(str);
-            delay(itvRepeatSendDelay);
-            sendMessage(str);
-
-            //TODO maybe sleep shouldn't be forever - it should last x minutes
+            auto msgId = esp_random();
+            char message[80];
+            sprintf(message, "%lu;%s", msgId, MSG_TEXT);
+            printf("Sending message: '%s'", message);
+            // char str[] = "Hello ESP-Now";
+            auto cntRetry = 1;
+            while (true)
+            {
+                sendMessage(message);
+                if (cntRetry++ >= maxRetries)
+                    break;
+                delay(itvRepeatSendDelay);
+            }
+            // TODO maybe sleep shouldn't be forever - it should last x minutes
             Serial.println("Going to deep sleep forever...");
             delay(100);
             esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
