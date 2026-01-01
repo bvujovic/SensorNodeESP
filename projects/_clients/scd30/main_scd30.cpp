@@ -29,6 +29,16 @@ void ledOnDelay(int secs)
     delay(secs * SECOND);
     ledOn(false);
 }
+void blinks(int times, int msInterval)
+{
+    for (int i = 0; i < times; i++)
+    {
+        ledOn(true);
+        delay(msInterval);
+        ledOn(false);
+        delay(msInterval);
+    }
+}
 void ledOnForever()
 {
     ledOn(true);
@@ -39,6 +49,26 @@ void ledOnRestart()
 {
     ledOnDelay(10);
     ESP.restart();
+}
+
+#include <LittleFS.h>
+void logEvent(const String &msg)
+{
+    File f = LittleFS.open("/log.txt", "a");
+    if (f)
+    {
+        auto minutes = millis() / 1000 / 60.0f;
+        f.printf("[%.1f min]\t\t", minutes);
+        f.println(msg);
+        f.close();
+    }
+}
+void printLog()
+{
+    File f = LittleFS.open("/log.txt", "r");
+    while (f.available())
+        Serial.write(f.read());
+    f.close();
 }
 
 #define USE_ESP_NOW
@@ -84,8 +114,8 @@ void printTime()
     Serial.print(':');
     if (seconds < 10)
         Serial.print('0');
-    Serial.println(seconds);
-    Serial.printf("Measurement interval %u seconds.\n", airSensor.getMeasurementInterval());
+    Serial.print(seconds);
+    Serial.printf("\tMeasurement interval: %u seconds.\n", airSensor.getMeasurementInterval());
 }
 
 enum Phase
@@ -95,8 +125,18 @@ enum Phase
 };
 Phase phase;
 
+void OnDataSent(uint8_t *mac, uint8_t sendStatus)
+{
+    if (sendStatus != 0)
+    {
+        logEvent("ESP-NOW last packet send failed, status: " + String(sendStatus));
+        Serial.println(" --- Last Packet Send Status: FAIL!!!");
+    }
+}
+
 void setup()
 {
+    LittleFS.begin();
     pinMode(pinLed, OUTPUT);
     ledOn(false);
     pinMode(pinButton, INPUT_PULLUP);
@@ -106,8 +146,10 @@ void setup()
     while (!airSensor.begin())
     {
         Serial.println("Air sensor not detected. Please check wiring. Freezing...");
+        logEvent("Air sensor not detected on startup.");
         ledOnRestart();
     }
+    airSensor.setTemperatureOffset(3);
     airSensor.setAutoSelfCalibration(false);
     Serial.printf("Auto calibration is %s.\n", airSensor.getAutoSelfCalibration() ? "ON" : "OFF");
     airSensor.setAltitudeCompensation(170); // Set altitude compensation to 170m
@@ -116,21 +158,31 @@ void setup()
     Serial.println("Sending data via ESP-NOW.");
 #endif
 
+    // When sketch starts, if btn pressed - FRC, else - normal operation.
+    auto isFrc = (digitalRead(pinButton) == LOW);
+    if (isFrc)
+    {
+        Serial.println("Button held on startup, starting forced recalibration with 425 ppm reference.");
+        blinks(5, 200);
+    }
+    else
+        Serial.println("Normal startup mode.");
+
+    Serial.print("Waiting for first measurement data...");
     airSensor.setMeasurementInterval(2);
     ledOn(true);
     while (!airSensor.dataAvailable())
     {
         Serial.print('.');
-        delay(500);
+        delay(1000);
     }
     Serial.println();
     ledOn(false);
 
-    // When sketch starts, if btn pressed - FRC, else - normal operation.
-    if (digitalRead(pinButton) == LOW) // button pressed -> FRC
+    if (isFrc)
     {
         ulong msStartFrc = millis(); // Start time for forced calibration
-        Serial.println("Button held on startup, starting forced recalibration with 425 ppm reference.");
+        // Serial.println("Button held on startup, starting forced recalibration with 425 ppm reference.");
         airSensor.setMeasurementInterval(ITV_MEASURE);
         // LED is blinking before sending FRC command (10 minutes)
         auto isLedOn = false;
@@ -162,6 +214,7 @@ void setup()
     while (esp_now_init() != 0)
     {
         Serial.println("ESP NOW INIT FAIL");
+        logEvent("ESP-NOW init error");
         ledOnRestart();
     }
 #ifdef ESP32
@@ -175,16 +228,29 @@ void setup()
     }
 #else
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+    esp_now_register_send_cb(OnDataSent);
     auto res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
-    printf("esp_now_add_peer res: 0x%X\n", res);
     if (res != 0)
+    {
+        printf("esp_now_add_peer res: 0x%X\n", res);
+        logEvent("ESP-NOW add peer error: " + String(res));
         ledOnRestart();
+    }
 #endif
 #endif
 }
 
+auto isBtnPressed = false, isBtnPressedPrev = false;
+
 void loop()
 {
+    isBtnPressed = digitalRead(pinButton) == LOW;
+    if (isBtnPressed && !isBtnPressedPrev)
+    {
+        Serial.println("Button pressed - displaying log:");
+        printLog();
+    }
+
     if (phase == Wait)
     {
         if (airSensor.dataAvailable())
@@ -218,8 +284,8 @@ void loop()
         // send data every ITV_SEND milliseconds, if CO2 is valid (not zero)
         if (millis() > msSend + (ITV_SEND - 0.06) * SECOND)
         {
-            if (digitalRead(pinButton) == LOW) // button pressed -> skip send
-                ledOn(true);                   // LED will be turned ON while button is pressed (waiting to send data)
+            if (isBtnPressed) // button pressed -> skip send
+                ledOn(true);  // LED will be turned ON while button is pressed (waiting to send data)
             else
             {
                 ledOn(false);
@@ -233,9 +299,12 @@ void loop()
                     airData.temperature = prevTemp;
                     airData.humidity = prevHum + 0.5f; // Round humidity
                     auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
-                    printf("Send res: 0x%X\n", res);
                     if (res != 0)
+                    {
+                        printf("Send res: 0x%X\n", res);
+                        logEvent("ESP-NOW send error: " + String(res));
                         ledOnDelay(10);
+                    }
                 }
                 else
                     Serial.println("CO2 is zero, skipping ESP-NOW send.");
@@ -248,5 +317,6 @@ void loop()
             }
         }
     }
+    isBtnPressedPrev = isBtnPressed;
     delay(20);
 }

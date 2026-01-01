@@ -11,20 +11,19 @@
 #include <Arduino.h>
 #include "esp_sleep.h"
 
-#define MSG_TEXT ("Water detected!")
-const int maxRetries = 2;
-const int itvRepeatSendDelay = 4000;
+#define MSG_TEXT "Water detected!"
+#define MAX_SEND_ATTEMPTS 3
+#define SEC_REPEAT_SEND_DELAY 4 /* Interval in seconds between send attempts */
+#define MIN_COOL_DOWN 20        /* Device will not respond to pin events for this many minutes */
+// Level that indicate a wake LOW/HIGH. E.g. INPUT_PULLUP and button to ground -> this should be 0 (LOW).
+#define ACTIVE_LEVEL LOW
+
 const gpio_num_t pinWake = GPIO_NUM_14; // <- choose an RTC-capable pin
 const byte pinLed = 22;                 // On-board LED (change if needed)
-
-// Choose the active level that should indicate a real wake.
-// For example, if you use INPUT_PULLUP and button to ground, ACTIVE_LEVEL should be 0 (LOW).
-const int activeLevel = 0; // 0 = LOW, 1 = HIGH
+void ledOn(bool on) { digitalWrite(pinLed, on); }
 
 #include <esp_now.h>
 #include <WiFi.h>
-const byte pinLed = 22; // LED_BUILTIN
-void ledOn(bool on) { digitalWrite(pinLed, on); }
 
 #include "MacAddresses.h"
 uint8_t *mac = macSoftEsp32DevIpex;
@@ -38,42 +37,30 @@ void OnDataSent(const uint8_t *mac, esp_now_send_status_t sendStatus)
     Serial.println((sendSuccess = sendStatus == ESP_NOW_SEND_SUCCESS) ? "Success" : "FAIL");
 }
 
-void blinks()
-{
-    pinMode(pinLed, OUTPUT);
-    for (int i = 0; i < 3; ++i)
-    {
-        digitalWrite(pinLed, HIGH);
-        delay(200);
-        digitalWrite(pinLed, LOW);
-        delay(200);
-    }
-}
-
 bool validateWakePin()
 {
     // Debounce / validation: sample this many times after wake
     const int cntSamples = 8;
     const int itvSampleDelay = 8;
-    // Sample the pin cntSamples times with short delay and count matches to activeLevel.
+    // Sample the pin cntSamples times with short delay and count matches to ACTIVE_LEVEL.
     int matches = 0;
     for (int i = 0; i < cntSamples; ++i)
     {
         int v = digitalRead((int)pinWake);
-        if (v == activeLevel)
+        if (v == ACTIVE_LEVEL)
             matches++;
         delay(itvSampleDelay);
     }
-    // Accept if a majority of samples show the activeLevel
+    // Accept if a majority of samples show the ACTIVE_LEVEL
     return (matches * 2) >= cntSamples;
 }
 
 void goToSleep()
 {
     // Reconfigure pin to proper input with pull resistor to avoid floating while sleeping
-    pinMode((int)pinWake, activeLevel == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
+    pinMode((int)pinWake, ACTIVE_LEVEL == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
     // Use EXT0 to wake from a single RTC pin. level param: 0 => wake on LOW, 1 => wake on HIGH
-    esp_sleep_enable_ext0_wakeup(pinWake, activeLevel);
+    esp_sleep_enable_ext0_wakeup(pinWake, ACTIVE_LEVEL);
     Serial.println("Going to deep sleep now.");
     delay(100);
     esp_deep_sleep_start();
@@ -90,11 +77,15 @@ void setup()
 {
     Serial.begin(115200);
     delay(10); // allow Serial to start
+    pinMode(pinLed, OUTPUT);
+    // ledOn(true);
+    // delay(500);
+    ledOn(false);
 
     esp_sleep_wakeup_cause_t wakeReason = esp_sleep_get_wakeup_cause();
     Serial.printf("Wakeup reason: %d\n", (int)wakeReason);
     // Prepare the wake pin as input and internal pull (so it's not floating)
-    pinMode((int)pinWake, activeLevel == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
+    pinMode((int)pinWake, ACTIVE_LEVEL == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
     if (wakeReason == ESP_SLEEP_WAKEUP_EXT0)
     {
         Serial.println("Woke from EXT0 wakeup. Validating pin...");
@@ -105,7 +96,6 @@ void setup()
         else
         {
             Serial.println("Valid wake detected.");
-            // blinkOnce();
             WiFi.mode(WIFI_STA);
             if (esp_now_init() != ESP_OK)
             {
@@ -124,20 +114,20 @@ void setup()
             auto msgId = esp_random();
             char message[80];
             sprintf(message, "%lu;%s", msgId, MSG_TEXT);
-            printf("Sending message: '%s'", message);
-            // char str[] = "Hello ESP-Now";
-            auto cntRetry = 1;
+            printf("Sending message: '%s'...\n", message);
+            fflush(stdout);
+            auto cntSendAttempt = 1;
             while (true)
             {
                 sendMessage(message);
-                if (cntRetry++ >= maxRetries)
+                if (cntSendAttempt++ >= MAX_SEND_ATTEMPTS)
                     break;
-                delay(itvRepeatSendDelay);
+                delay(SEC_REPEAT_SEND_DELAY * 1000);
             }
-            // TODO maybe sleep shouldn't be forever - it should last x minutes
-            Serial.println("Going to deep sleep forever...");
+            printf("Cool down period - device will not respond to pin events for %.1f minutes.\n", MIN_COOL_DOWN);
             delay(100);
-            esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+            // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+            esp_sleep_enable_timer_wakeup(MIN_COOL_DOWN * 60 * 1000000ULL);
             esp_deep_sleep_start();
         }
     }

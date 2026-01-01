@@ -23,7 +23,7 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
 - [ ] README.md: Change images where necessary.
 - [ ] Hub:
     - [ ] Improve SimpleEvent handling in the loop() of main_hub.cpp. Handle ID of the message, log and send to WA message text, maybe change the name (SimpleEvent->???), try to add more clients (diff devices, messages...)
-    - [ ] (WIP, testing needed) Remove all references to hc12 and stx882 from code.
+    - [ ] (testing needed) Remove all references to hc12 and stx882 from code.
     - [ ] Split Hub project into 2:
         - Hub: connected to the internet, communication with clients is done via ESP-NOW. First, create alternative version for attiny_stx882 project (Water detection).
         - Hub /wo internet: communication with clients is done via radio (HC-12, ~~SRX882~~...). Maybe it could have its own wireless network for web app access?
@@ -33,16 +33,16 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
     - [ ] Add 5V buzzer (with transistor)
 - [ ] Clients:
     - [ ] (WIP) SCD30:
+        - [~] (NT) Check if pinButton is pressed before wait for response from airSensor (SCD30)
         - [ ] Save to log file any indication of an error. Make sure it can be read easily.
-        - [ ] Check if pinButton is pressed before wait for response from airSensor (SCD30)
-        - [ ] Check documantation for setting the right temperature \[offset\]
-        - [ ] Try to use TimeSlotSend class 
+            - [x] Add ESP-NOW Sent callback
+            - [ ] Try to solve logged issues by retrying functions that failed. If there is no logged issues and there is still missing data - maybe it's because of the power supply (not enough current).
+        - [ ] (NT) Check documantation for setting the right temperature \[offset\]
+        - [ ] Try to use TimeSlotSend class
+        - [ ] Add an image of the device and a README.md file to the project.
+    - [x] (WIP, testing needed) esp32-wake-on-pin
+        - [x] Test if device works with PIR sensor
     - [ ] Add more sensor nodes
-        - [ ] (WIP, testing needed) esp32-wake-on-pin
-            - [x] Try to generate random ID each time ESP wakes up
-            - [x] Resend message couple of seconds after the first one.
-            - [ ] Test if device works with PIR sensor
-            - [x] Create project folder: name, code, pictures, README.md
         - [ ] Microphone (noise levels)
 
 ## Add new client routine
