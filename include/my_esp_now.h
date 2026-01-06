@@ -103,7 +103,6 @@ void setPeers()
     setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32
     setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::UndefinedSensorType, Device::ESP8266NodeMCU); // test ESP8266
     setPeer(peers + (cntPeers++), macEsp32BattConnUsbC, SensorType::SimpleEvent, Device::ESP32BattConn);       // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
-    //* When adding more peers, don't forget to update size of peers[] array.
     addPeers();
 }
 

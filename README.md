@@ -3,27 +3,28 @@
 Data from sensor (PIR, CO2, smoke/water detectors...) is logged and sometimes sent to user (WhatsApp message, E-mail).
 
 ## Server (Hub): ESP32 (SRX882, buzzer)
-![Server: ESP32 (SRX882, buzzer)](projects/hub/docs/esp32_server_device.jpg)
+![Server: ESP32 (SRX882, buzzer)](projects/hub/docs/esp32_hub_device.jpg)
 
 ## Web app - interface
 ![Web app - interface](projects/hub/docs/web_page_interface.png)
 
 ## Client: ESP8266 & ENS160+AHT21
 ESP wakes up every 10 minutes and sends data from sensors to the hub (server) via ESP-NOW.
-![Client: ESP8266 & ENS160+AHT21](projects/ens160_aht21/docs/nodemcu_ens160_aht21.jpg)
+![Client: ESP8266 & ENS160+AHT21](projects/_clients/ens160_aht21/docs/nodemcu_ens160_aht21.jpg)
 
-## Client: ATtiny85 & STX882
-ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...), sends signal via STX882, goes back to sleep. Device can be battery powered.
-### Movement detection
-![Client: ATtiny85 (STX882...)](projects/attiny_stx882/docs/attiny_stx882_test_device_pir.jpg)
+## Client: ESP32, Li-Ion 18650 battery, ESP-NOW
+ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...), sends an ESP-NOW message to a predefined MAC address (hub) and then goes back to deep sleep.
 ### Water detection
-![Client: ATtiny85 (STX882...)](projects/attiny_stx882/docs/attiny_stx882_finished_water_detect.jpg)
+![ESP32, Li-Ion 18650 battery, water detection wires](projects/_clients/esp32-wake-on-pin/docs/esp32-wake-on-pin_device.jpg)
 
 ## TODO
-- [ ] README.md: Change images where necessary.
+- [ ] README.md:
+    - [x] Fix broken links to images in _clients and __discontinued folders
+    - [ ] Add new images of the hub and clients
 - [ ] Hub:
     - [ ] Improve SimpleEvent handling in the loop() of main_hub.cpp. Handle ID of the message, log and send to WA message text, maybe change the name (SimpleEvent->???), try to add more clients (diff devices, messages...)
-    - [ ] (testing needed) Remove all references to hc12 and stx882 from code.
+    - [ ] Create a mechanisam (class) that will prevent hub from accepting repeated messages from clients. SimpleEvent messages with the same ID, batches of messages from the same client caused by failed logic in retrying (this should be logged as an error).
+    - [ ] (NT) Remove all references to hc12 and stx882 from code.
     - [ ] Split Hub project into 2:
         - Hub: connected to the internet, communication with clients is done via ESP-NOW. First, create alternative version for attiny_stx882 project (Water detection).
         - Hub /wo internet: communication with clients is done via radio (HC-12, ~~SRX882~~...). Maybe it could have its own wireless network for web app access?
@@ -33,15 +34,15 @@ ATtiny sleeps, wakes up on HIGH (test button, PIR, wires for water detection...)
     - [ ] Add 5V buzzer (with transistor)
 - [ ] Clients:
     - [ ] (WIP) SCD30:
-        - [~] (NT) Check if pinButton is pressed before wait for response from airSensor (SCD30)
+        - [x] Check if pinButton is pressed before wait for response from airSensor (SCD30)
         - [ ] Save to log file any indication of an error. Make sure it can be read easily.
             - [x] Add ESP-NOW Sent callback
             - [ ] Try to solve logged issues by retrying functions that failed. If there is no logged issues and there is still missing data - maybe it's because of the power supply (not enough current).
-        - [ ] (NT) Check documantation for setting the right temperature \[offset\]
+        - [x] Check documentation for setting the right temperature offset
         - [ ] Try to use TimeSlotSend class
         - [ ] Add an image of the device and a README.md file to the project.
-    - [x] (WIP, testing needed) esp32-wake-on-pin
-        - [x] Test if device works with PIR sensor
+    - [ ] esp32-wake-on-pin
+        - [x] Does water detecting works normal after cool-down period or the signal repeats regardless if the wires are (still) submerged? YES
     - [ ] Add more sensor nodes
         - [ ] Microphone (noise levels)
 

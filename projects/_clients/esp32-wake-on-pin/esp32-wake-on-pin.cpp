@@ -20,7 +20,8 @@
 
 const gpio_num_t pinWake = GPIO_NUM_14; // <- choose an RTC-capable pin
 const byte pinLed = 22;                 // On-board LED (change if needed)
-void ledOn(bool on) { digitalWrite(pinLed, on); }
+// void ledOn(bool on) { digitalWrite(pinLed, on); }
+void ledOn(bool on) { digitalWrite(pinLed, !on); } //TODO needs testing!
 
 #include <esp_now.h>
 #include <WiFi.h>

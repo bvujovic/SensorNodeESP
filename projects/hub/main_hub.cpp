@@ -27,6 +27,8 @@ struct tm ti;
 char line[80]; // general purpose char array - formating data
 #include "NotifyWhatsApp.h"
 bool isSimpleEventHandled = false;
+#include "SimpleEventHandler.h"
+SimpleEventHandler seh;
 #include "Enums.h"
 #include "my_esp_now.h"
 // ulong msLastGetTime = 0;
