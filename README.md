@@ -8,6 +8,9 @@ Data from sensor (PIR, CO2, smoke/water detectors...) is logged and sometimes se
 ## Web app - interface
 ![Web app - interface](projects/hub/docs/web_page_interface.png)
 
+## Windows desktop app: backup logs (data from sensors)
+![Windows desktop app](_WinBackupApp/WinBackupApp.png)
+
 ## Client: ESP8266 & ENS160+AHT21
 ESP wakes up every 10 minutes and sends data from sensors to the hub (server) via ESP-NOW.
 ![Client: ESP8266 & ENS160+AHT21](projects/_clients/ens160_aht21/docs/nodemcu_ens160_aht21.jpg)
@@ -19,30 +22,24 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
 
 ## TODO
 - [ ] README.md:
-    - [x] Fix broken links to images in _clients and __discontinued folders
     - [ ] Add new images of the hub and clients
 - [ ] Hub:
-    - [ ] Improve SimpleEvent handling in the loop() of main_hub.cpp. Handle ID of the message, log and send to WA message text, maybe change the name (SimpleEvent->???), try to add more clients (diff devices, messages...)
-    - [ ] Create a mechanisam (class) that will prevent hub from accepting repeated messages from clients. SimpleEvent messages with the same ID, batches of messages from the same client caused by failed logic in retrying (this should be logged as an error).
-    - [ ] (NT) Remove all references to hc12 and stx882 from code.
-    - [ ] Split Hub project into 2:
-        - Hub: connected to the internet, communication with clients is done via ESP-NOW. First, create alternative version for attiny_stx882 project (Water detection).
-        - Hub /wo internet: communication with clients is done via radio (HC-12, ~~SRX882~~...). Maybe it could have its own wireless network for web app access?
-            - Test if it's possible for 2 ESP32's to communicate /wo (known) WiFi network. If it's possible, create project with 2 simple parts: client (reacts on some simple event e.g. PIR) and server (beeps when ESP-NOW msg from client is received)
+    - [ ] (WIP) Improve SimpleEvent handling in the loop() of main_hub.cpp. Handle ID of the message, log and send to WA message text, try to add more clients (diff devices, messages...)
+    - [ ] (testing) Create a mechanisam (class) that will prevent hub from accepting repeated messages from clients. SimpleEvent messages with the same ID, batches of messages from the same client caused by failed logic in retrying (this should be logged as an error).
+    - [x] Remove all references to hc12 and stx882 from code.
+    - [ ] Make 2nd version of Hub project - Hub /wo internet for places without internet access or with unknown net credentials. Communication with clients is done via ESP-NOW or radio (HC-12, LoRa...). Maybe it could have its own wireless network for web app access?
+        - [ ] Test if it's possible for 2 ESP32's to communicate /wo (known) WiFi network. If it's possible, create project with 2 simple parts: client (reacts on some simple event e.g. PIR) and server (beeps when ESP-NOW msg from client is received)
     - [ ] Web App:
         - [ ] Improve interface (chart.js disappears, shrinks)
-    - [ ] Add 5V buzzer (with transistor)
+    - [ ] Add 5V buzzer (with transistor) for louder sound notifications
 - [ ] Clients:
     - [ ] (WIP) SCD30:
-        - [x] Check if pinButton is pressed before wait for response from airSensor (SCD30)
         - [ ] Save to log file any indication of an error. Make sure it can be read easily.
-            - [x] Add ESP-NOW Sent callback
             - [ ] Try to solve logged issues by retrying functions that failed. If there is no logged issues and there is still missing data - maybe it's because of the power supply (not enough current).
-        - [x] Check documentation for setting the right temperature offset
         - [ ] Try to use TimeSlotSend class
         - [ ] Add an image of the device and a README.md file to the project.
     - [ ] esp32-wake-on-pin
-        - [x] Does water detecting works normal after cool-down period or the signal repeats regardless if the wires are (still) submerged? YES
+        - [ ] Test this code with ESP32-C6 SuperMini when it arrives
     - [ ] Add more sensor nodes
         - [ ] Microphone (noise levels)
 
@@ -54,6 +51,7 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
     - Add new members to arrays: StrSensorTypes[], SensorTypesComment[]
     - OnDataRecv(): if (p->type == SensorType::...)
 - Enums.h: Add new members to SensorType, Device
+- if type == SimpleEvent - add MAC and name to devices in ctor of SimpleEventHandler
 - index.html:
     - CmbChartParamsChange(): adjusting chart for sensors with temp and hum
     - lastChartParam: add default property for new sensor

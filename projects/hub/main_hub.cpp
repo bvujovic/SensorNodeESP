@@ -26,7 +26,7 @@ time_t now; // this are the seconds since Epoch (1970) - UTC
 struct tm ti;
 char line[80]; // general purpose char array - formating data
 #include "NotifyWhatsApp.h"
-bool isSimpleEventHandled = false;
+// R bool isSimpleEventHandled = false;
 #include "SimpleEventHandler.h"
 SimpleEventHandler seh;
 #include "Enums.h"
@@ -224,28 +224,34 @@ void loop()
         esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
         peerRespMillis = NULL;
     }
-
-    if (isSimpleEventHandled)
+    // ESP-NOW: handle Simple Event messages
+    if (seh.isNewMessageReceived())
     {
-        isSimpleEventHandled = false;
-        Notification *notif = GetNotif(WaterDetected);
-        if (notif != NULL)
+        // Serial.printf("Simple Event received from %s: %s\n", seh.getDeviceName(), seh.getMessageText());
+        if (seh.getPeerInfo()->device == Device::ESP32BattConn)
         {
-            if (notif->wa_msg)
+            Notification *notif = GetNotif(WaterDetected);
+            if (notif != NULL)
             {
-                wifiConfig(false);
-                delay(3000);
-                // 💥Stan, kuhinja, sudopera:
-                // VISOK NIVO VODE U SUDOPERI 💦
-                NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
-                wifiConfig(true);
+                if (notif->wa_msg)
+                {
+                    Serial.println("Sending WhatsApp message about water detected...");
+                    wifiConfig(false);
+                    delay(3000);
+                    // 💥Stan, kuhinja, sudopera:
+                    // VISOK NIVO VODE U SUDOPERI 💦
+                    auto res = NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
+                    if (res > 0)
+                        logger.add("NotifyWhatsApp", "ESP32Hub", String(res).c_str());
+                    wifiConfig(true);
+                }
+                if (notif->buzz)
+                    buzzer.blinkCritical();
             }
-            // if (notifications[WaterDetected].buzz)
-            if (notif->buzz)
-                buzzer.blinkCritical();
+            logger.add(StrSensorTypes[SensorType::SimpleEvent], StrDevices[Device::ESP32BattConn], seh.getMessageText());
+            // , "KitchenSinkWater", "Water detected!");
         }
-        logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
-        // delay(1000); // to avoid multiple handling of simple event in a short time
+        seh.clearEventData();
     }
 
     getLocalTime(&ti);

@@ -20,8 +20,7 @@
 
 const gpio_num_t pinWake = GPIO_NUM_14; // <- choose an RTC-capable pin
 const byte pinLed = 22;                 // On-board LED (change if needed)
-// void ledOn(bool on) { digitalWrite(pinLed, on); }
-void ledOn(bool on) { digitalWrite(pinLed, !on); } //TODO needs testing!
+void ledOn(bool on) { digitalWrite(pinLed, !on); }
 
 #include <esp_now.h>
 #include <WiFi.h>
@@ -69,7 +68,10 @@ void goToSleep()
 
 void sendMessage(char *str)
 {
-    auto res = esp_now_send(mac, (uint8_t *)&str, strlen(str));
+    // Serial.println("Sending message...");
+    // Serial.println(str);
+    // Serial.println(strlen(str));
+    auto res = esp_now_send(mac, (uint8_t *)str, strlen(str));
     if (res != ESP_OK)
         Serial.printf("Send response: 0x%X\n", res);
 }
@@ -116,7 +118,7 @@ void setup()
             char message[80];
             sprintf(message, "%lu;%s", msgId, MSG_TEXT);
             printf("Sending message: '%s'...\n", message);
-            fflush(stdout);
+            // fflush(stdout);
             auto cntSendAttempt = 1;
             while (true)
             {
@@ -125,7 +127,7 @@ void setup()
                     break;
                 delay(SEC_REPEAT_SEND_DELAY * 1000);
             }
-            printf("Cool down period - device will not respond to pin events for %.1f minutes.\n", MIN_COOL_DOWN);
+            printf("Cool down period - device will not respond to pin events for %.1f minutes.\n", (float)MIN_COOL_DOWN);
             delay(100);
             // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
             esp_sleep_enable_timer_wakeup(MIN_COOL_DOWN * 60 * 1000000ULL);

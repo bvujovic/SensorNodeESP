@@ -1,14 +1,6 @@
 #pragma once
 
 //TODO Pogledati https://stackoverflow.com/questions/11714325/how-to-get-enum-item-name-from-its-value
-/// @brief
-enum SrxCommand
-{
-    /// @brief no command is detected
-    None,
-    /// @brief water overflow in kitchen sink
-    KitchenSinkWater,
-};
 
 /// @brief Type of sensor. What kind of data is sent/received: weather, room temp/CO2..., PIR/water detection...
 /// This does not define particular device/sensor.
@@ -46,4 +38,12 @@ enum EventType
     Error,
     Warning,
     Critical,
+};
+
+enum EnumNots
+{
+    WaterDetected,
+    AQI4,
+    ECO2_1000,
+    AQI5,
 };

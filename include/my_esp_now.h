@@ -2,6 +2,8 @@
 #include <esp_now.h>
 #include "MacAddresses.h"
 #include "AirData.h"
+#include <esp-now-defs.h>
+#include "Notification.h"
 
 const char *StrSensorTypes[] = {
     "Undefined",
@@ -29,23 +31,7 @@ const char *StrDevices[] = {
     "WemosExtAnt",
     "ESP8266 Wemos 01",
     "ESP32 DevKit",
-    "ESP32 BattConn",
-};
-
-struct Notification
-{
-    int id;
-    String name;
-    bool buzz;
-    bool wa_msg;
-};
-
-enum EnumNots
-{
-    WaterDetected,
-    AQI4,
-    ECO2_1000,
-    AQI5,
+    "Kitchen/Sink", // "ESP32 BattConn",
 };
 
 Notification notifications[] = {
@@ -63,13 +49,6 @@ Notification *GetNotif(EnumNots e)
             return &n;
     return NULL;
 }
-
-struct peer_info
-{
-    uint8_t peer_addr[ESP_NOW_ETH_ALEN];
-    SensorType type;
-    Device device;
-};
 
 peer_info peers[5]; // ESP-NOW peers
 int cntPeers;       // peers count
@@ -156,10 +135,23 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
+    // discard batch messages (less than 1sec from the last one) from the same MAC address
+    static uint8_t lastMAC[MAC_LEN];
+    static unsigned long lastTime = 0;
+    unsigned long now = millis();
+    auto discardMsg = false;
+    if (equalMACs(mac, lastMAC) && (now - lastTime) < 1000)
+        discardMsg = true;
+    memcpy(lastMAC, mac, MAC_LEN);
+    lastTime = now;
+    if (discardMsg)
+        return;
+    // else        // call logger.add()...
+
     auto p = findPeer(mac);
     if (p != NULL)
     {
-        Serial.printf("Data received from %s @ %s\n", StrSensorTypes[p->type], StrDevices[p->device]);
+        Serial.printf("Data received from %s @ %s, len: %d\n", StrSensorTypes[p->type], StrDevices[p->device], len);
 
         // response to ESP-NOW command/request: millis, time
         if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
@@ -194,46 +186,19 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             Serial.println(line);
             logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
         }
-        // temporary: testing simple events with ESP-NOW
         else if (p->type == SensorType::SimpleEvent)
         {
-            isSimpleEventHandled = true;
-
-            //TODO replace str with actual incoming data; if repeated msgId - discard msg...
-            //TODO ...save source (object&place/location) based on mac addr and msg so it will be processed in main
-            auto str = "123456;Something...";
-            uint32_t msgId;
-            char msgText[80];
-            auto res = sscanf(str, "%lu;%s", &msgId, &msgText);
-            printf("Parsed %d items: msgId=%lu, msgText='%s'\n", res, msgId, msgText);
-            // Parsed 2 items: msgId=123456, msgText='Something...'
-
-            // Serial.println("Simple Event received!");
-            // Notification *notif = GetNotif(WaterDetected);
-            // if (notif != NULL)
-            // {
-            //     if (notif->wa_msg)
-            //     {
-            //         wifiConfig(false);
-            //         delay(3000);
-            //         // 💥Stan, kuhinja, sudopera:
-            //         // VISOK NIVO VODE U SUDOPERI 💦
-            //         NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
-            //         wifiConfig(true);
-            //     }
-            //     // if (notifications[WaterDetected].buzz)
-            //     if (notif->buzz)
-            //         buzzer.blinkCritical();
-            // }
-            // logger.add(StrSensorTypes[SensorType::SimpleEvent], "KitchenSinkWater", "Water detected!");
+            memcpy(line, incomingData, len);
+            line[len] = '\0';
+            seh.newMessage(mac, line, p);
         }
     }
     else
     {
         strncpy(line, (const char *)incomingData, len);
         line[len] = '\0';
-        printf("Data received from UNKNOWN peer: %s\n", line);
-        printMAC(mac);
+        // printf("Data received from UNKNOWN peer: %s\n", line);
+        // printMAC(mac);
         logger.add("Unknown Type", "Unknown Device", line);
     }
 }
