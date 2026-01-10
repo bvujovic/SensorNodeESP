@@ -88,11 +88,13 @@ void startWebServer()
               {
         const char *sensor = req->arg("sensor").c_str(); // http://192.168.0.80/sensorTypeComment?sensor=EnsAht
         int sensorType = SensorType::UndefinedSensorType;
-        int n = sizeof(StrSensorTypes) / sizeof(char *);
-        for (size_t i = 0; i < n; i++)
-            if (strcmp(StrSensorTypes[i], sensor) == 0)
+        // int n = sizeof(ToString::StrSensorTypes) / sizeof(char *);
+        // int n = sizeof(SensorType::SensorTypeCount) / sizeof(char *);
+        // int n = SensorType::SensorTypeCount;
+        for (size_t i = 0; i < SensorType::SensorTypeCount; i++)
+            if (strcmp(ToString::SensorTypes[i], sensor) == 0)
                 sensorType = i;
-        req->send(200, "text/plain", SensorTypesComment[sensorType]); });
+        req->send(200, "text/plain", ToString::SensorTypesComment[sensorType]); });
 
     server.on("/nots", HTTP_GET, [](AsyncWebServerRequest *req)
               {
@@ -228,28 +230,28 @@ void loop()
     if (seh.isNewMessageReceived())
     {
         // Serial.printf("Simple Event received from %s: %s\n", seh.getDeviceName(), seh.getMessageText());
-        if (seh.getPeerInfo()->device == Device::ESP32BattConn)
+        auto peer = seh.getPeerInfo();
+        if (peer->device == Device::ESP32BattConn)
         {
-            Notification *notif = GetNotif(WaterDetected);
+            auto notif = GetNotif(WaterDetected);
             if (notif != NULL)
             {
                 if (notif->wa_msg)
                 {
-                    Serial.println("Sending WhatsApp message about water detected...");
+                    // Serial.println("Sending WhatsApp message about water detected...");
                     wifiConfig(false);
                     delay(3000);
                     // 💥Stan, kuhinja, sudopera:
                     // VISOK NIVO VODE U SUDOPERI 💦
                     auto res = NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
-                    if (res > 0)
-                        logger.add("NotifyWhatsApp", "ESP32Hub", String(res).c_str());
+                    if (res != 200)
+                        logger.add("NotifyWhatsApp", "ESP32Hub", (String("WhatsApp message sent, resp code: ") + res).c_str());
                     wifiConfig(true);
                 }
                 if (notif->buzz)
                     buzzer.blinkCritical();
             }
-            logger.add(StrSensorTypes[SensorType::SimpleEvent], StrDevices[Device::ESP32BattConn], seh.getMessageText());
-            // , "KitchenSinkWater", "Water detected!");
+            logger.add(ToString::SensorTypes[peer->type], ToString::Devices[peer->device], seh.getMessageText());
         }
         seh.clearEventData();
     }

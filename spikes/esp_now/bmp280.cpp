@@ -3,7 +3,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BMP280.h>
+#include <Adafruit_BMP280.h> // lib_deps = adafruit/Adafruit BMP280 Library@^2.6.8
 Adafruit_BMP280 bmp;
 
 #define SEC (1000)

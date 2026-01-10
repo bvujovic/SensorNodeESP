@@ -2,53 +2,9 @@
 #include <esp_now.h>
 #include "MacAddresses.h"
 #include "AirData.h"
-#include <esp-now-defs.h>
+#include "peer_info.h"
 #include "Notification.h"
-
-const char *StrSensorTypes[] = {
-    "Undefined",
-    "SimpleEvent",
-    "EnsAht",
-    "Temp",
-    "EnsDht",
-    "BME680",
-    "SCD30",
-};
-
-const char *SensorTypesComment[] = {
-    "/",
-    "Logged event without additional data",
-    "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
-    "Temperature: temp (C)",
-    "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
-    "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC",
-    "Air quality: temp (C), hum (%), CO2 (ppm)",
-};
-
-const char *StrDevices[] = {
-    "Undefined",
-    "ESP8266 NodeMCU",
-    "WemosExtAnt",
-    "ESP8266 Wemos 01",
-    "ESP32 DevKit",
-    "Kitchen/Sink", // "ESP32 BattConn",
-};
-
-Notification notifications[] = {
-    {WaterDetected, "Water detected", 1, 1},
-    {AQI4, "Air quality: AQI >= 4", 0, 0},
-    {ECO2_1000, "Air quality: ECO2 >= 1000", 0, 0},
-    {AQI5, "Air quality: AQI >= 5", 0, 0},
-};
-
-/// @brief Gets the notification, given its id (EnumNots).
-Notification *GetNotif(EnumNots e)
-{
-    for (auto &&n : notifications)
-        if (n.id == e)
-            return &n;
-    return NULL;
-}
+#include "ToString.h"
 
 peer_info peers[5]; // ESP-NOW peers
 int cntPeers;       // peers count
@@ -100,7 +56,7 @@ void addPeers()
         peer->channel = 1;
         auto res = esp_now_add_peer(peer);
         if (res == ESP_OK)
-            Serial.printf("\t%s\n", StrDevices[p.device]);
+            Serial.printf("\t%s\n", ToString::Devices[p.device]);
         else
             Serial.printf("- Failed to add peer. Reason: 0x%X\n", res);
     }
@@ -133,25 +89,41 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
     Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
-void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+// discard batch messages (less than 1sec from the last one) from the same MAC address
+bool burstDetected(const uint8_t *mac)
 {
-    // discard batch messages (less than 1sec from the last one) from the same MAC address
     static uint8_t lastMAC[MAC_LEN];
     static unsigned long lastTime = 0;
     unsigned long now = millis();
-    auto discardMsg = false;
+    static bool discardMsg = false;
+    static int cntBursts = 1;
     if (equalMACs(mac, lastMAC) && (now - lastTime) < 1000)
+    {
         discardMsg = true;
+        cntBursts++;
+    }
+    else if (discardMsg) // end of burst
+    {
+        discardMsg = false;
+        sprintf(line, "Burst detected (%d messages) from MAC address %02X:%02X:%02X:%02X:%02X:%02X"
+            , cntBursts, lastMAC[0], lastMAC[1], lastMAC[2], lastMAC[3], lastMAC[4], lastMAC[5]);
+        logger.add("HUB", "HUB", line); // log burst end
+        cntBursts = 0;
+    }
     memcpy(lastMAC, mac, MAC_LEN);
     lastTime = now;
-    if (discardMsg)
+    return discardMsg;
+}
+
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+    if (burstDetected(mac))
         return;
-    // else        // call logger.add()...
 
     auto p = findPeer(mac);
     if (p != NULL)
     {
-        Serial.printf("Data received from %s @ %s, len: %d\n", StrSensorTypes[p->type], StrDevices[p->device], len);
+        Serial.printf("Data received from %s @ %s, len: %d\n", ToString::SensorTypes[p->type], ToString::Devices[p->device], len);
 
         // response to ESP-NOW command/request: millis, time
         if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
@@ -176,7 +148,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
                 buzzer.blinkWarning();
             if (GetNotif(AQI5)->buzz && ad.AQI == 5)
                 buzzer.blinkCritical();
-            logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
+            logger.add(ToString::SensorTypes[p->type], ToString::Devices[p->device], line);
         }
         else if (p->type == SensorType::SCD30)
         {
@@ -184,13 +156,13 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             memcpy(&ad, incomingData, len);
             sprintf(line, "%.1f;%u;%u", ad.temperature, ad.humidity, ad.ECO2);
             Serial.println(line);
-            logger.add(StrSensorTypes[p->type], StrDevices[p->device], line);
+            logger.add(ToString::SensorTypes[p->type], ToString::Devices[p->device], line);
         }
         else if (p->type == SensorType::SimpleEvent)
         {
             memcpy(line, incomingData, len);
             line[len] = '\0';
-            seh.newMessage(mac, line, p);
+            seh.newMessage(line, p);
         }
     }
     else
