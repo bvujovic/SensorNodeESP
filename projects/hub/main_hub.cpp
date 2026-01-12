@@ -26,13 +26,10 @@ time_t now; // this are the seconds since Epoch (1970) - UTC
 struct tm ti;
 char line[80]; // general purpose char array - formating data
 #include "NotifyWhatsApp.h"
-// R bool isSimpleEventHandled = false;
 #include "SimpleEventHandler.h"
 SimpleEventHandler seh;
 #include "Enums.h"
 #include "my_esp_now.h"
-// ulong msLastGetTime = 0;
-// bool isTimeSet = false;
 
 void getTime()
 {
@@ -88,9 +85,6 @@ void startWebServer()
               {
         const char *sensor = req->arg("sensor").c_str(); // http://192.168.0.80/sensorTypeComment?sensor=EnsAht
         int sensorType = SensorType::UndefinedSensorType;
-        // int n = sizeof(ToString::StrSensorTypes) / sizeof(char *);
-        // int n = sizeof(SensorType::SensorTypeCount) / sizeof(char *);
-        // int n = SensorType::SensorTypeCount;
         for (size_t i = 0; i < SensorType::SensorTypeCount; i++)
             if (strcmp(ToString::SensorTypes[i], sensor) == 0)
                 sensorType = i;
@@ -238,7 +232,6 @@ void loop()
             {
                 if (notif->wa_msg)
                 {
-                    // Serial.println("Sending WhatsApp message about water detected...");
                     wifiConfig(false);
                     delay(3000);
                     // 💥Stan, kuhinja, sudopera:

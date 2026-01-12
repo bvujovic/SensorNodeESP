@@ -1,6 +1,6 @@
-//* Device reports CO2, temperature and humidity from SCD30 sensor via ESP-NOW to a receiver device (hub).
-//* ESP8266, SCD30, button
-//* https://sensirion.com/products/catalog/SCD30
+//* Device reports CO2, temperature and humidity from SCD30 sensor via ESP-NOW to a receiver device (hub)
+//* every 10 minutes.
+//* ESP8266, SCD30, button. SCD30 documentation: https://sensirion.com/products/catalog/SCD30
 
 #include "Arduino.h"
 #include <Wire.h>
@@ -56,10 +56,11 @@ void ledOnRestart()
 }
 
 #include <LittleFS.h>
+const char *logPath = "/log.txt";
 void logEvent(const String &msg)
 {
     Serial.println(msg);
-    File f = LittleFS.open("/log.txt", "a");
+    File f = LittleFS.open(logPath, "a");
     if (f)
     {
         auto minutes = millis() / 1000 / 60.0f;
@@ -68,14 +69,18 @@ void logEvent(const String &msg)
         f.close();
     }
 }
-void printLog()
+void logPrint()
 {
-    File f = LittleFS.open("/log.txt", "r");
+    File f = LittleFS.open(logPath, "r");
     while (f.available())
         Serial.write(f.read());
     f.close();
 }
-// TODO clear log - click: print log, double click: clear log
+void logClear()
+{
+    LittleFS.remove(logPath);
+    Serial.println("Log cleared.");
+}
 
 #define USE_ESP_NOW
 #ifdef USE_ESP_NOW
@@ -139,9 +144,12 @@ bool isDataSent = false;
 void OnDataSent(uint8_t *mac, uint8_t sendStatus)
 {
     if (sendStatus != 0)
-        logEvent("ESP-NOW last packet send FAILED, status: " + String(sendStatus));
-    else
+    {
+        // prev format (example): ESP-NOW last packet send FAILED, status: 1
+        logEvent("ESP-NOW last packet send FAILED, cntSendRetries: " + String(cntSendRetries));
         cntSendRetries++;
+        Serial.printf("Send retry %d of %d.\n", cntSendRetries, MAX_SEND_ATTEMPTS);
+    }
     if (sendStatus == 0 || cntSendRetries >= MAX_SEND_ATTEMPTS)
     {
         phase = Wait;
@@ -152,6 +160,29 @@ void OnDataSent(uint8_t *mac, uint8_t sendStatus)
         cntSendRetries = 0;
     }
     isDataSent = false;
+}
+
+// forced re-calibration for scd30 sensor
+void frc()
+{
+    auto msStartFrc = millis(); // Start time for forced calibration
+    // Serial.println("Button held on startup, starting forced recalibration with 425 ppm reference.");
+    airSensor.setMeasurementInterval(ITV_MEASURE);
+    // LED is blinking before sending FRC command (10 minutes)
+    auto isLedOn = false;
+    while (millis() < msStartFrc + ITV_FRC * SECOND)
+    {
+        delay(2000);
+        ledOn(isLedOn = !isLedOn);
+    }
+    msStartFrc = millis();                       // Reset start time for FRC
+    airSensor.setForcedRecalibrationFactor(425); // Set forced recalibration factor to 425 ppm
+    Serial.println("Forced recalibration with 425 ppm reference command sent to sensor.");
+    // LED is ON after sending FRC command (10 minutes)
+    ledOn(true);
+    while (millis() < msStartFrc + ITV_FRC * SECOND)
+        delay(1000);
+    ledOn(false);
 }
 
 void setup()
@@ -175,10 +206,11 @@ void setup()
     airSensor.setAltitudeCompensation(170); // Set altitude compensation to 170m
     Serial.printf("Altitude compensation set to %u meters.\n", airSensor.getAltitudeCompensation());
 
-    // When sketch starts, if btn pressed - FRC, else - normal operation.
+    // When sketch starts, if btn pressed - clear log & FRC, else - normal operation.
     auto isFrc = (digitalRead(pinButton) == LOW);
     if (isFrc)
     {
+        logClear();
         Serial.println("Button held on startup, starting forced recalibration with 425 ppm reference.");
         blinks(5, 200);
     }
@@ -197,26 +229,7 @@ void setup()
     ledOn(false);
 
     if (isFrc)
-    {
-        ulong msStartFrc = millis(); // Start time for forced calibration
-        // Serial.println("Button held on startup, starting forced recalibration with 425 ppm reference.");
-        airSensor.setMeasurementInterval(ITV_MEASURE);
-        // LED is blinking before sending FRC command (10 minutes)
-        auto isLedOn = false;
-        while (millis() < msStartFrc + ITV_FRC * SECOND)
-        {
-            delay(2000);
-            ledOn(isLedOn = !isLedOn);
-        }
-        msStartFrc = millis();                       // Reset start time for FRC
-        airSensor.setForcedRecalibrationFactor(425); // Set forced recalibration factor to 425 ppm
-        Serial.println("Forced recalibration with 425 ppm reference command sent to sensor.");
-        // LED is ON after sending FRC command (10 minutes)
-        ledOn(true);
-        while (millis() < msStartFrc + ITV_FRC * SECOND)
-            delay(1000);
-        ledOn(false);
-    }
+        frc();
     else
         Serial.println("Normal startup, reading and sending values to the hub.");
 
@@ -230,7 +243,6 @@ void setup()
     WiFi.mode(WIFI_STA);
     while (esp_now_init() != 0)
     {
-        // Serial.println("ESP NOW INIT FAIL");
         logEvent("ESP-NOW init error");
         ledOnRestart();
     }
@@ -238,22 +250,22 @@ void setup()
     memcpy(peerInfo.peer_addr, mac, 6);
     peerInfo.channel = 0;
     peerInfo.encrypt = false;
-    if (esp_now_add_peer(&peerInfo) != ESP_OK)
-    {
-        Serial.println("Failed to add peer");
-        ledOnRestart();
-    }
+    auto res = esp_now_add_peer(&peerInfo);
+    if (res != ESP_OK)
+    // {
+    //     Serial.println("Failed to add peer");
+    //     ledOnRestart();
+    // }
 #else
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
     esp_now_register_send_cb(OnDataSent);
     auto res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
     if (res != 0)
+#endif
     {
-        // printf("esp_now_add_peer res: 0x%X\n", res);
         logEvent("ESP-NOW add peer error: " + String(res));
         ledOnRestart();
     }
-#endif
 #endif
 }
 
@@ -265,7 +277,7 @@ void loop()
     if (isBtnPressed && !isBtnPressedPrev)
     {
         Serial.println("Button pressed - displaying log:");
-        printLog();
+        logPrint();
     }
 
     if (phase == Wait)

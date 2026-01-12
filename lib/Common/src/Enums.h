@@ -22,26 +22,6 @@ enum SensorType
     SensorTypeCount // number of sensor types
 };
 
-// const char *StrSensorTypes[] = {
-//     "Undefined",
-//     "SimpleEvent",
-//     "EnsAht",
-//     "Temp",
-//     "EnsDht",
-//     "BME680",
-//     "SCD30",
-// };
-
-// const char *SensorTypesComment[] = {
-//     "/",
-//     "Logged event without additional data",
-//     "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
-//     "Temperature: temp (C)",
-//     "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC, AQI",
-//     "Air quality: temp (C), hum (%), status, eqCO2 (ppm), TVOC",
-//     "Air quality: temp (C), hum (%), CO2 (ppm)",
-// };
-
 enum Device
 {
     UndefinedDevice,
@@ -51,15 +31,6 @@ enum Device
     ESP32DevKit,
     ESP32BattConn,
 };
-
-// const char *StrDevices[] = {
-//     "Undefined",
-//     "ESP8266 NodeMCU",
-//     "WemosExtAnt",
-//     "ESP8266 Wemos 01",
-//     "ESP32 DevKit",
-//     "Kitchen/Sink", // "ESP32 BattConn",
-// };
 
 /// @brief Depending on event type hub will handle data differently: log data, send WA notification, buzz...
 enum EventType

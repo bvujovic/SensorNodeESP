@@ -15,9 +15,9 @@ Data from sensor (PIR, CO2, smoke/water detectors...) is logged and sometimes se
 ESP wakes up every 10 minutes and sends data from sensors to the hub (server) via ESP-NOW.
 
 ### SCD30 - CO2
-...
+![Client: SCD30 & CO2](projects/_clients/scd30/wemos_scd30.jpg)
 
-### ENS160, DHT22 - air quality data
+### ENS160, DHT22 - air quality data (temp, hum, TVOC)
 ![Client: ESP8266 & ENS160+AHT21](projects/_clients/ens160_dht22/docs/wemos_ens160_dht22_client_finished.jpg)
 
 ## Client: ESP32, Li-Ion 18650 battery, ESP-NOW
@@ -27,21 +27,20 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
 
 ## TODO
 - [ ] README.md:
-    - [ ] (WIP) Add new images of the hub and clients
+    - [x] Add new images of the hub and clients
 - [ ] Hub:
-    - [x] Improve SimpleEvent handling in the loop() of main_hub.cpp. Handle ID of the message, log and send to WA message text, try to add more clients (diff devices, messages...)
-    - [x] Improve (with logging number of repeated messages) a mechanisam (class or a function) that will prevent hub from accepting repeated messages from clients: batches of messages from the same client caused by failed logic in retrying (this should be logged as an error).
     - [ ] Make 2nd version of Hub project - Hub /wo internet for places without internet access or with unknown net credentials. Communication with clients is done via ESP-NOW or radio (HC-12, LoRa...). Maybe it could have its own wireless network for web app access?
-        - [ ] Test if it's possible for 2 ESP32's to communicate /wo (known) WiFi network. If it's possible, create project with 2 simple parts: client (reacts on some simple event e.g. PIR) and server (beeps when ESP-NOW msg from client is received)
+        - [ ] (testing) Test if it's possible for 2 ESP32's to communicate /wo (known) WiFi network. If it's possible, create project with 2 simple parts: client (reacts on some simple event e.g. PIR) and server (beeps when ESP-NOW msg from client is received)
     - [ ] Web App:
         - [ ] Improve interface (chart.js disappears, shrinks)
     - [ ] Add 5V buzzer (with transistor) for louder sound notifications
 - [ ] Clients:
     - [ ] (WIP) SCD30:
-        - [ ] Save to log file any indication of an error. Make sure it can be read easily.
-            - [ ] Try to solve logged issues by retrying functions that failed. If there is no logged issues and there is still missing data - maybe it's because of the power supply (not enough current).
+        - [x] Save to log file any indication of an error. Make sure it can be read easily
+            - [x] Try to solve logged issues by retrying functions that failed
+                - [ ] (testing) Solve problem with retrying: cntSendRetries++ wasn't called at the right place
         - [ ] Try to use TimeSlotSend class
-        - [ ] Add an image of the device and a README.md file to the project.
+        - [x] Add an image of the device to the project.
     - [ ] esp32-wake-on-pin
         - [ ] Test this code with ESP32-C6 SuperMini when it arrives
     - [ ] Add more sensor nodes
