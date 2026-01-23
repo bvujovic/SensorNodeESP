@@ -14,7 +14,6 @@ int lenCmdMillis;                 // length of (string) "millis" command
 peer_info *peerRespMillis = NULL; // send millis to this peer
 #define CMD_TIME ("time")
 int lenCmdTime; // length of (string) "time" command
-// TODO this could be a class: CMD, lenCmd [peerResp]
 
 void printMAC(const uint8_t *mac);
 void addPeers();
@@ -33,6 +32,7 @@ void setPeers()
     lenCmdMillis = strlen(CMD_MILLIS);
     lenCmdTime = strlen(CMD_TIME);
     cntPeers = 0;
+    //TODO It would be good to be able to easily compile different versions with different clients: for Brdo, Vranić... (#if[def] ... ?)
     setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::SCD30, Device::WemosExtAnt);
     setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
     setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32

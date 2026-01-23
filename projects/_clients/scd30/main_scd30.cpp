@@ -1,6 +1,7 @@
 //* Device reports CO2, temperature and humidity from SCD30 sensor via ESP-NOW to a receiver device (hub)
 //* every 10 minutes.
 //* ESP8266, SCD30, button. SCD30 documentation: https://sensirion.com/products/catalog/SCD30
+//* https://sensirion.com/media/documents/0FEA2450/61652EF9/Sensirion_CO2_Sensors_SCD30_Low_Power_Mode.pdf
 
 #include "Arduino.h"
 #include <Wire.h>
@@ -14,7 +15,6 @@ AirData airData;
 
 #define TESTING false
 
-// https://sensirion.com/media/documents/0FEA2450/61652EF9/Sensirion_CO2_Sensors_SCD30_Low_Power_Mode.pdf
 #define ITV_FRC ((TESTING ? 1 : 10) * 60)     // Forced Recalibration wait time (before and after FRC command)
 #define ITV_SEND ((TESTING ? 2 : 10) * 60)    // Data send interval in seconds
 #define ITV_WAIT ((TESTING ? 1 : 8.5) * 60)   // Waiting phase interval in seconds
@@ -63,8 +63,9 @@ void logEvent(const String &msg)
     File f = LittleFS.open(logPath, "a");
     if (f)
     {
-        auto minutes = millis() / 1000 / 60.0f;
-        f.printf("[%.1f min]\t\t", minutes);
+        auto seconds = (millis() + 500) / 1000;
+        auto minutes = seconds / 60;
+        f.printf("[%lu:%lu]\t\t", minutes, seconds % 60);
         f.println(msg);
         f.close();
     }
@@ -146,11 +147,11 @@ void OnDataSent(uint8_t *mac, uint8_t sendStatus)
     if (sendStatus != 0)
     {
         // prev format (example): ESP-NOW last packet send FAILED, status: 1
-        logEvent("ESP-NOW last packet send FAILED, cntSendRetries: " + String(cntSendRetries));
+        logEvent("ESP-NOW last packet send FAILED, cntSendRetries: " + String(cntSendRetries) + " channel: " + String(WiFi.channel()));
         cntSendRetries++;
         Serial.printf("Send retry %d of %d.\n", cntSendRetries, MAX_SEND_ATTEMPTS);
     }
-    if (sendStatus == 0 || cntSendRetries >= MAX_SEND_ATTEMPTS)
+    else
     {
         phase = Wait;
         Serial.println(" * Wait phase");
@@ -160,6 +161,8 @@ void OnDataSent(uint8_t *mac, uint8_t sendStatus)
         cntSendRetries = 0;
     }
     isDataSent = false;
+    if (cntSendRetries >= MAX_SEND_ATTEMPTS)
+        ESP.restart();
 }
 
 // forced re-calibration for scd30 sensor
@@ -241,6 +244,7 @@ void setup()
 
 #ifdef USE_ESP_NOW
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);
     while (esp_now_init() != 0)
     {
         logEvent("ESP-NOW init error");

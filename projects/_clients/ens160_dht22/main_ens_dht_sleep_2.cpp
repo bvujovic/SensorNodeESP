@@ -38,17 +38,25 @@ uint8_t macFail[] = {0x78, 0x1C, 0x3C, 0xCA, 0xF3, 0x33}; // Non-existent MAC fo
 
 #include "TimeSlotSend.h"
 TimeSlotSend tss(10, 10, -20, 15, 60);
+#include "ClientLogger.h"
+ClientLogger logger;
+#include "OneButton.h"   // lib_deps = mathertel/OneButton@^2.0.0
+OneButton btn(D7, true); // click: send data, 2click: print log, long click: clear log
+bool sendDataNow = false;
 
 void sendTimeRequest()
 {
-    esp_now_send(mac, (uint8_t *)tss.getCmdTime(), strlen(tss.getCmdTime()));
+    auto res = esp_now_send(mac, (uint8_t *)tss.getCmdTime(), strlen(tss.getCmdTime()));
+    if (res != 0)
+        logger.add("ESP-NOW time request send error: " + String(res));
     tss.timeReqIsSent(millis());
 }
 
 void OnDataSent(uint8_t *mac, uint8_t sendStatus)
 {
     if (sendStatus != 0)
-        Serial.println("Last Packet Send Status: FAIL!!!");
+        // Serial.println("Last Packet Send Status: FAIL!!!");
+        logger.add("ESP-NOW last packet send FAILED, status: " + String(sendStatus));
 }
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
@@ -66,7 +74,8 @@ void setup()
     dht.begin();
     while (NO_ERR != ens.begin())
     {
-        Serial.println("Communication with ENS160 device failed, please check connection");
+        // Serial.println("Communication with ENS160 device failed, please check connection");
+        logger.add("Communication with ENS160 device failed, please check connection");
         ledOnDelay(10);
     }
     ens.setPWRMode(ENS160_STANDARD_MODE);
@@ -76,26 +85,39 @@ void setup()
     WiFi.mode(WIFI_STA);
     while (esp_now_init() != 0)
     {
-        Serial.println("ESP NOW INIT FAIL");
+        // Serial.println("ESP NOW INIT FAIL");
+        logger.add("ESP-NOW init error");
         ledOnDelay(10);
     }
     auto res = esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
     if (res != 0)
-        Serial.printf("Register receiver code: %X\n", res);
+        // Serial.printf("Register receiver code: %X\n", res);
+        logger.add("ESP-NOW register recv cb error: " + String(res));
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
     esp_now_register_send_cb(OnDataSent);
     res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
     if (res != 0)
-        printf("esp_now_add_peer res: 0x%X\n", res);
-    if (res != 0)
+    {
+        // printf("esp_now_add_peer res: 0x%X\n", res);
+        logger.add("ESP-NOW add peer error: " + String(res));
         ledOnDelay(10);
+    }
     else
         sendTimeRequest();
+
+    btn.attachClick([]()
+                    { sendDataNow = true; });
+
+    btn.attachDoubleClick([]()
+                          { logger.print(); });
+
+    btn.attachLongPressStart([]()
+                             { logger.clear(); });
 }
 
 void loop()
 {
-    if (tss.isTimeToSendData(millis()))
+    if (tss.isTimeToSendData(millis()) || sendDataNow)
     {
         do
         {
@@ -142,7 +164,8 @@ void loop()
             if (shouldRetry)
             {
                 cntRetries++;
-                Serial.printf("Retrying... (%d/%d)\n", cntRetries, maxRetries);
+                // Serial.printf("Retrying... (%d/%d)\n", cntRetries, maxRetries);
+                logger.add("Retrying sensor read... (" + String(cntRetries) + "/" + String(maxRetries) + ")");
                 ledOnDelay(10);
                 if (isInWarmUpPhase())
                     ledOnDelay(50); // If in warm-up phase, wait longer
@@ -156,11 +179,13 @@ void loop()
             auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
             if (res != 0)
             {
-                printf("Send res: 0x%X\n", res);
+                // printf("Send res: 0x%X\n", res);
+                logger.add("ESP-NOW send error: " + String(res));
                 ledOnDelay(5);
             }
         }
         delay(100); // wait for send callback
+        sendDataNow = false;
         Serial.println("GO TO SLEEP");
         ESP.deepSleep(tss.getDeepSleepTime());
     }
@@ -169,13 +194,18 @@ void loop()
         sendTimeRequest();
     if (tss.getIsWakeUpTimeWrong())
     {
-        Serial.println("Wake-up time is off!");
-        for (size_t i = 0; i < 20; i++)
+        // TODO if ESP woke up a bit too late - send data anyway
+
+        // Serial.println("Wake-up time is off!");
+        logger.add("Wake-up time is off!");
+        for (size_t i = 0; i <= 20; i++)
         {
             ledOn(i % 2);
             delay(100);
-        } // LED stays ON after this loop - indication of wake-up time off
+        }
         tss.resetWakeUpTimeWrong();
     }
-    delay(250);
+    // delay(250);
+    delay(20);
+    btn.tick();
 }
