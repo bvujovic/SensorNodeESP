@@ -23,8 +23,8 @@ const char *ToString::SensorTypesComment[] = {
 const char *ToString::Devices[] = {
     "Undefined",
     "ESP8266 NodeMCU",
-    "WemosExtAnt",
-    "ESP8266 Wemos 01",
-    "ESP32 DevKit",
-    "Kitchen/Sink", // "ESP32 BattConn",
+    "Main.Desk.CO2", // "WemosExtAnt"
+    "Main.Desk.Air", // "ESP8266 Wemos 01"
+    "ESP32 DevKit",  //
+    "Kitchen.Sink",  // "ESP32 BattConn",
 };

@@ -26,21 +26,21 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
 ![ESP32, Li-Ion 18650 battery, water detection wires](projects/_clients/esp32-wake-on-pin/docs/esp32-wake-on-pin_device.jpg)
 
 ## TODO
-- [ ] README.md:
-    - [x] Add new images of the hub and clients
 - [ ] Hub:
-    - [ ] Make 2nd version of Hub project - Hub /wo internet for places without internet access or with unknown net credentials. Communication with clients is done via ESP-NOW or radio (HC-12, LoRa...). Maybe it could have its own wireless network for web app access?
-        - [ ] (testing) Test if it's possible for 2 ESP32's to communicate /wo (known) WiFi network. If it's possible, create project with 2 simple parts: client (reacts on some simple event e.g. PIR) and server (beeps when ESP-NOW msg from client is received)
+    - [ ] Make 2nd version of Hub project - Hub /wo internet for places without internet access or with unknown net credentials. Communication with clients is done via ESP-NOW or radio (HC-12, LoRa, http...). Maybe it could have its own wireless network for web app access?
+        - [x] Create a project with 2 simple parts: client (reacts on some simple event e.g. PIR) and server (beeps when ESP-NOW msg from client is received)
     - [ ] Web App:
         - [ ] Improve interface (chart.js disappears, shrinks)
-    - [ ] Add 5V buzzer (with transistor) for louder sound notifications
 - [ ] Clients:
+    - [ ] (WIP) Make a class with simple logging capabilites (take methods from SCD30), put it in lib/_Client [rename to _clients] and use it in SCD30 and ENS&DHT projects
+        - [x] Turn off LED after signaling for missed wake up
+    - [ ] Change getDeepSleepTime() so that it takes into account wake time and time spent in sending data
+    - [ ] (OPT) Put retrying logic in a class
+    - [ ] (OPT) Put TSS, LoggerMin and retrying logic in a class that will be used by most clients that report data regularly to the hub
     - [ ] (WIP) SCD30:
-        - [x] Save to log file any indication of an error. Make sure it can be read easily
-            - [x] Try to solve logged issues by retrying functions that failed
-                - [ ] (testing) Solve problem with retrying: cntSendRetries++ wasn't called at the right place
-        - [ ] Try to use TimeSlotSend class
-        - [x] Add an image of the device to the project.
+        - [ ] (testing) Solve problem with retrying: cntSendRetries++ wasn't called at the right place
+        - [ ] Try using TimeSlotSend class
+        - [ ] Button click: print log on Serial and send data (prev data or wait for new?) to the hub
     - [ ] esp32-wake-on-pin
         - [ ] Test this code with ESP32-C6 SuperMini when it arrives
     - [ ] Add more sensor nodes
