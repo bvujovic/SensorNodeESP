@@ -23,19 +23,20 @@ void TimeSlotSend::onTimeStringRecv(const uint8_t *data, int len, ulong currentM
     // printf("onTimeStringRecv: len=%d\n", len);
     if (len == 8 && data[2] == ':' && data[5] == ':') // if it's response to time command - e.g. 16:25:01
     {
-        char str[10];
-        memcpy(str, data, len);
-        str[len] = 0;
+        // char str[10];
+        memcpy(strTime, data, len);
+        strTime[len] = 0;
         if (printTime)
-            printf("Received time string: %s\n", str);
+            printf("Received time string: %s\n", strTime);
 
         int h, m, s, secs = 0;
-        if (sscanf(str, "%d:%d:%d", &h, &m, &s) != 3)
+        if (sscanf(strTime, "%d:%d:%d", &h, &m, &s) != 3)
             return;
         secs = secondsUntilNextSlot(h, m, s);
         // printf("Seconds to next %d-minute mark + %d sec: %d\n", getSlotMin(), getSlotSec(), secs);
         msTimeToSendData = currentMillis + secs * 1000UL - itvSensorRead;
         msTimeReqSent = 0; // reset time request sent
         isWakeUpTimeWrong = secs > secWakeUpTimeWrong;
+        itvWrongTimeDiff = isWakeUpTimeWrong ? secs - secBeforeWakeup : UINT16_MAX;
     }
 }

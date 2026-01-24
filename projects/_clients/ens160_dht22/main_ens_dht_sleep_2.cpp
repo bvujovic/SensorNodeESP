@@ -56,7 +56,7 @@ void OnDataSent(uint8_t *mac, uint8_t sendStatus)
 {
     if (sendStatus != 0)
         // Serial.println("Last Packet Send Status: FAIL!!!");
-        logger.add("ESP-NOW last packet send FAILED, status: " + String(sendStatus));
+        logger.add("ESP-NOW last packet send FAILED, status: " + String(sendStatus), tss.getStrTime());
 }
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
@@ -75,7 +75,7 @@ void setup()
     while (NO_ERR != ens.begin())
     {
         // Serial.println("Communication with ENS160 device failed, please check connection");
-        logger.add("Communication with ENS160 device failed, please check connection");
+        logger.add("Communication with ENS160 device failed, please check connection", tss.getStrTime());
         ledOnDelay(10);
     }
     ens.setPWRMode(ENS160_STANDARD_MODE);
@@ -86,20 +86,20 @@ void setup()
     while (esp_now_init() != 0)
     {
         // Serial.println("ESP NOW INIT FAIL");
-        logger.add("ESP-NOW init error");
+        logger.add("ESP-NOW init error", tss.getStrTime());
         ledOnDelay(10);
     }
     auto res = esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
     if (res != 0)
         // Serial.printf("Register receiver code: %X\n", res);
-        logger.add("ESP-NOW register recv cb error: " + String(res));
+        logger.add("ESP-NOW register recv cb error: " + String(res), tss.getStrTime());
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
     esp_now_register_send_cb(OnDataSent);
     res = esp_now_add_peer(mac, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
     if (res != 0)
     {
         // printf("esp_now_add_peer res: 0x%X\n", res);
-        logger.add("ESP-NOW add peer error: " + String(res));
+        logger.add("ESP-NOW add peer error: " + String(res), tss.getStrTime());
         ledOnDelay(10);
     }
     else
@@ -165,7 +165,7 @@ void loop()
             {
                 cntRetries++;
                 // Serial.printf("Retrying... (%d/%d)\n", cntRetries, maxRetries);
-                logger.add("Retrying sensor read... (" + String(cntRetries) + "/" + String(maxRetries) + ")");
+                logger.add("Retrying sensor read... (" + String(cntRetries) + "/" + String(maxRetries) + ")", tss.getStrTime());
                 ledOnDelay(10);
                 if (isInWarmUpPhase())
                     ledOnDelay(50); // If in warm-up phase, wait longer
@@ -180,32 +180,41 @@ void loop()
             if (res != 0)
             {
                 // printf("Send res: 0x%X\n", res);
-                logger.add("ESP-NOW send error: " + String(res));
+                logger.add("ESP-NOW send error: " + String(res), tss.getStrTime());
                 ledOnDelay(5);
             }
         }
-        delay(100); // wait for send callback
-        sendDataNow = false;
-        Serial.println("GO TO SLEEP");
-        ESP.deepSleep(tss.getDeepSleepTime());
+        // if data is sent on click - do not go to sleep and wait for time slot to send data
+        if (sendDataNow)
+            sendDataNow = false;
+        else
+        {
+            delay(100); // wait for send callback
+            Serial.println("GO TO SLEEP");
+            ESP.deepSleep(tss.getDeepSleepTime());
+        }
     }
     // repeat sendTimeRequest() if the answer (time) is not received for more than 1 sec
     if (tss.isTimeRespMissing(millis()))
         sendTimeRequest();
     if (tss.getIsWakeUpTimeWrong())
     {
-        // TODO if ESP woke up a bit too late - send data anyway
-
-        // Serial.println("Wake-up time is off!");
-        logger.add("Wake-up time is off!");
-        for (size_t i = 0; i <= 20; i++)
+        logger.add("Wake-up time is off! Diff: " + String(tss.getItvWrongTimeDiff()) + " seconds", tss.getStrTime());
+        // if ESP woke up just a bit too late - send data anyway
+        if (tss.getItvWrongTimeDiff() > 540) // more than 9 minutes = less than 1 minute late
         {
-            ledOn(i % 2);
-            delay(100);
+            sendDataNow = true;
+        }
+        else
+        {
+            for (size_t i = 0; i <= 20; i++)
+            {
+                ledOn(i % 2);
+                delay(100);
+            }
         }
         tss.resetWakeUpTimeWrong();
     }
-    // delay(250);
     delay(20);
     btn.tick();
 }

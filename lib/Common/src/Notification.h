@@ -12,6 +12,7 @@ struct Notification
 
 Notification notifications[] = {
     {WaterDetected, "Water detected", 1, 1},
+    {CO2_800, "CO2 >= 800", 0, 0},
     {AQI4, "Air quality: AQI >= 4", 0, 0},
     {ECO2_1000, "Air quality: ECO2 >= 1000", 0, 0},
     {AQI5, "Air quality: AQI >= 5", 0, 0},

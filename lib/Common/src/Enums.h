@@ -44,6 +44,7 @@ enum EventType
 enum EnumNots
 {
     WaterDetected,
+    CO2_800,
     AQI4,
     ECO2_1000,
     AQI5,

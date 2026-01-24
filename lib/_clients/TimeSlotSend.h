@@ -14,11 +14,14 @@ private:
     uint16_t itvSensorRead;      // (milliseconds) Time it takes to read data from sensors
     uint16_t secWakeUpTimeWrong; // (seconds) Threshold to consider wake-up time as off if more than this value to wait
 
-    static const char cmdTime[];     // "time" command string
-    uint16_t itvTimeRespWait = 5000; // (milliseconds) Time to wait for "time" response
-    ulong msTimeReqSent = 0;         // Time when "time" request is sent
-    ulong msTimeToSendData = 0;      // Time to send data from sensors
-    bool isWakeUpTimeWrong = false;  // flag to indicate wake-up time is wrong (too early or too late)
+    static const char cmdTime[];            // "time" command string
+    uint16_t itvTimeRespWait = 5000;        // (milliseconds) Time to wait for "time" response
+    ulong msTimeReqSent = 0;                // Time when "time" request is sent
+    ulong msTimeToSendData = 0;             // Time to send data from sensors
+    bool isWakeUpTimeWrong = false;         // flag to indicate wake-up time is wrong (too early or too late)
+    uint16_t itvWrongTimeDiff = UINT16_MAX; // (seconds) Difference in seconds if wake-up time is wrong
+
+    char strTime[9] = ""; // buffer for time string "HH:MM:SS"
 
 public:
     /// @brief Construct a new Time Slot Send object
@@ -37,6 +40,8 @@ public:
     int16_t getSecBeforeWakeup() const { return secBeforeWakeup; }
     uint16_t getItvSensorRead() const { return itvSensorRead; }
     uint16_t getSecWakeUpTimeWrong() const { return secWakeUpTimeWrong; }
+    uint16_t getItvWrongTimeDiff() const { return itvWrongTimeDiff; }
+    char *getStrTime() { return strTime; }
 
     const char *getCmdTime() const { return cmdTime; }
     bool getIsWakeUpTimeWrong() const { return isWakeUpTimeWrong; }
