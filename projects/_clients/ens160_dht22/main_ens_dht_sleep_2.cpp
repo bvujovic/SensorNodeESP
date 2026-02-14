@@ -119,10 +119,11 @@ void loop()
 {
     if (tss.isTimeToSendData(millis()) || sendDataNow)
     {
+        cntRetries = 0;
         do
         {
             // printf("Reading sensors millis: %lu\n", millis());
-            cntRetries = 0;
+            // cntRetries = 0;
             shouldRetry = false;
             // DHT22
             float hum = dht.readHumidity();
@@ -166,6 +167,7 @@ void loop()
                 cntRetries++;
                 // Serial.printf("Retrying... (%d/%d)\n", cntRetries, maxRetries);
                 logger.add("Retrying sensor read... (" + String(cntRetries) + "/" + String(maxRetries) + ")", tss.getStrTime());
+                delay(1000);
                 ledOnDelay(10);
                 if (isInWarmUpPhase())
                     ledOnDelay(50); // If in warm-up phase, wait longer

@@ -41,8 +41,13 @@ public:
     uint16_t getItvSensorRead() const { return itvSensorRead; }
     uint16_t getSecWakeUpTimeWrong() const { return secWakeUpTimeWrong; }
     uint16_t getItvWrongTimeDiff() const { return itvWrongTimeDiff; }
+    /// @brief Gets the time when "time" request is sent. Returns 0 if time request is not sent yet.
+    ulong getMsTimeReqSent() const { return msTimeReqSent; }
+    /// @brief Gets the time when onTimeStringRecv is called. If time is not received yet, returns empty string.
     char *getStrTime() { return strTime; }
-
+    /// @brief  Gets the current time string 
+    const char *getCurrentTime(ulong currentMillis) const;
+    /// @brief "time" command string to request current time from the hub
     const char *getCmdTime() const { return cmdTime; }
     bool getIsWakeUpTimeWrong() const { return isWakeUpTimeWrong; }
     // set isWakeUpTimeWrong to false

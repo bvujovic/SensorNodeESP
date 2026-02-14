@@ -206,6 +206,30 @@
                 });
                 fileContent = filteredLines.join('\n');
             }
+            var lastValues = [];
+            var res = GetLastValues(lines, "SCD30", 2);
+            if (res != null)
+                lastValues.push("SCD30: " + res); // "SCD30 (CO2): "
+            res = GetLastValues(lines, "EnsDht", 4);
+            if (res != null)
+                lastValues.push("EnsDht: " + res); // "EnsDht (TVOC): "
+            spnLastValues.innerHTML = 'Last values → ' + lastValues.join(', ');
+        }
+
+        function GetLastValues(lines, sensor, idxValue) {
+            // if there is a line that contains <sensor>, take the <idxValue> value and write it to console
+            for (let i = lines.length - 1; i >= 0; i--) {
+                if (lines[i].includes(sensor)) {
+                    // write to console last part of this line when is split with ';'
+                    const parts = lines[i].split(';');
+                    if (idxValue < parts.length) {
+                        // console.log(sensor + ": " + parts[idxValue]);
+                        return parts[idxValue];
+                    }
+                    break;
+                }
+            }
+            return null;
         }
 
         function DisplayText(content) {
@@ -336,11 +360,9 @@
                     }
                 }
                 chart.update();
-                // lastCharParam = cmbChartParams.value;
-                const l = lastChartParam[cmbSensors.value] = cmbChartParams.value;
-                // if (lastCharParam != -1 && lastCharParam != '')
-                if (l != -1 && l != '')
-                    spnLastValues.innerHTML = 'Last values: ' + ys.slice(-4).join(", ");
+                // const l = lastChartParam[cmbSensors.value] = cmbChartParams.value;
+                // if (l != -1 && l != '')
+                //     spnLastValues.innerHTML = 'Last values: ' + ys.slice(-4).join(", ");
             }
         }
 
@@ -509,7 +531,10 @@
                 <td colspan="2">
                     <textarea id="txtFile" rows="10" readonly
                         style="font-family: 'Courier New', Courier, monospace; width: 100%;"></textarea>
-                    <input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="RefreshFile()">
+                    <div>
+                        <input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="RefreshFile()">
+                    </div>
+                    <span id="spnLastValues"></span>
                 </td>
             </tr>
         </table>
@@ -526,7 +551,7 @@
                             <option>---</option>
                         </select>
                         &nbsp;
-                        <span id="spnLastValues"></span>
+                        <!-- <span id="spnLastValues"></span> -->
                     </td>
                 </tr>
                 <tr>

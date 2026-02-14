@@ -40,3 +40,23 @@ void TimeSlotSend::onTimeStringRecv(const uint8_t *data, int len, ulong currentM
         itvWrongTimeDiff = isWakeUpTimeWrong ? secs - secBeforeWakeup : UINT16_MAX;
     }
 }
+
+const char *TimeSlotSend::getCurrentTime(ulong currentMillis) const
+{
+    // Return current time string if it's received, otherwise return empty string
+    if (strTime[0] == 0)
+        return "";
+    // Calculate current time based on strTime, msTimeReqSent and currentMillis
+    int h, m, s;
+    if (sscanf(strTime, "%d:%d:%d", &h, &m, &s) != 3)
+        return "";
+    ulong startSeconds = h * 3600 + m * 60 + s;
+    ulong ms = startSeconds * 1000 + currentMillis - msTimeReqSent;
+    int seconds = ms / 1000;
+    int hours = seconds / 3600;
+    int minutes = (seconds % 3600) / 60;
+    int secs = seconds % 60;
+    static char buf[12];
+    sprintf(buf, "%02d:%02d:%02d", hours, minutes, secs);
+    return buf;
+}

@@ -156,6 +156,8 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
             memcpy(&ad, incomingData, len);
             sprintf(line, "%.1f;%u;%u", ad.temperature, ad.humidity, ad.ECO2);
             Serial.println(line);
+            if (GetNotif(CO2_800)->buzz && ad.ECO2 >= 800)
+                buzzer.blinkWarning();
             logger.add(ToString::SensorTypes[p->type], ToString::Devices[p->device], line);
         }
         else if (p->type == SensorType::SimpleEvent)

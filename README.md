@@ -28,18 +28,15 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
 ## TODO
 - [ ] Hub:
     - [ ] Make 2nd version of Hub project - Hub /wo internet for places without internet access or with unknown net credentials. Communication with clients is done via ESP-NOW or radio (HC-12, LoRa, http...). Maybe it could have its own wireless network for web app access?
-        - [x] Create a project with 2 simple parts: client (reacts on some simple event e.g. PIR) and server (beeps when ESP-NOW msg from client is received)
     - [ ] Web App:
         - [ ] Improve interface (chart.js disappears, shrinks)
 - [ ] Clients:
     - [ ] (WIP) Make a class with simple logging capabilites (take methods from SCD30), put it in lib/_Client [rename to _clients] and use it in SCD30 and ENS&DHT projects
-        - [x] Turn off LED after signaling for missed wake up
     - [ ] Change getDeepSleepTime() so that it takes into account wake time and time spent in sending data
     - [ ] (OPT) Put retrying logic in a class
     - [ ] (OPT) Put TSS, LoggerMin and retrying logic in a class that will be used by most clients that report data regularly to the hub
     - [ ] (WIP) SCD30:
-        - [ ] (testing) Solve problem with retrying: cntSendRetries++ wasn't called at the right place
-        - [ ] Try using TimeSlotSend class
+        - [ ] (WIP) Try using TimeSlotSend class
         - [ ] Button click: print log on Serial and send data (prev data or wait for new?) to the hub
     - [ ] esp32-wake-on-pin
         - [ ] Test this code with ESP32-C6 SuperMini when it arrives
