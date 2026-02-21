@@ -28,6 +28,7 @@ enum Device
     ESP8266NodeMCU,
     WemosExtAnt,
     Wemos1,
+    Wemos2,
     ESP32DevKit,
     ESP32BattConn,
 };

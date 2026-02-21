@@ -10,7 +10,6 @@ AirData airData;
 #define SECOND (1000UL)
 #define MINUTE (60 * SECOND)
 
-// #define TESTING false
 #define ITV_FRC (10 * 60)      // Forced Recalibration wait time (before and after FRC command)
 #define ITV_TIME_SLOT_MIN (10) // Time slot in minutes (send data every ITV_TIME_SLOT_MIN minutes at slotSec seconds after the minute mark)
 #define ITV_TIME_SLOT_SEC (5)  // Seconds after the minute mark to send data (e.g. 5 means send at 11:00:05, 11:10:05...)
@@ -66,8 +65,42 @@ ClientLogger logger;
 OneButton btn(D6, true); // click: send data, 2click: print log, long click: clear log
 bool sendDataNow = false;
 
+// int prevCO2 = 0;                       // Previous CO2 value
+// float prevTemp = 0.0f, prevHum = 0.0f; // Previous temperature and humidity values
+ulong msSend = 0;                      // Last send time
 ulong msDataSent = 0;
 bool isInWaitPhase = false;
+
+void printValues(uint16_t co2, float temp, float hum)
+{
+    Serial.print("Displaying CO2: ");
+    Serial.print(co2);
+    Serial.print(" ppm, Temp: ");
+    Serial.print(temp, 1);
+    Serial.print(" C, Humidity: ");
+    Serial.print(hum, 1);
+    Serial.print(" %");
+}
+
+// D
+// void printTime(bool printItvMeasurement = true)
+// {
+//     ulong ms = millis() - msSend;
+//     ulong totalSeconds = (ms + 500) / 1000; // Round milliseconds to nearest second
+//     ulong minutes = (totalSeconds / 60) % 60;
+//     ulong seconds = totalSeconds % 60;
+//     Serial.print("Uptime: ");
+//     if (minutes < 10)
+//         Serial.print('0');
+//     Serial.print(minutes);
+//     Serial.print(':');
+//     if (seconds < 10)
+//         Serial.print('0');
+//     Serial.print(seconds);
+//     if (printItvMeasurement)
+//         Serial.printf("\tMeasurement interval: %u seconds.", airSensor.getMeasurementInterval());
+//     Serial.println();
+// }
 
 void goToWaitPhase(bool b)
 {
@@ -82,6 +115,8 @@ void goToWaitPhase(bool b)
 
 void sendTimeRequest()
 {
+    Serial.println(String("sendTimeRequest @ ") + tss.getCurrentTime(millis()));
+    // printTime(false);
     auto res = esp_now_send(mac, (uint8_t *)tss.getCmdTime(), strlen(tss.getCmdTime()));
     if (res != 0)
         logger.add("ESP-NOW time request send error: " + String(res));
@@ -91,46 +126,12 @@ void sendTimeRequest()
 void OnDataSent(uint8_t *mac, uint8_t sendStatus)
 {
     if (sendStatus != 0)
-        logger.add("ESP-NOW last packet send FAILED, status: " + String(sendStatus), tss.getCurrentTime(millis()));
+        logger.add("ESP-NOW last packet send FAILED, status: " + String(sendStatus));
 }
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
     tss.onTimeStringRecv(incomingData, len, millis(), true);
-}
-
-int prevCO2 = 0;                       // Previous CO2 value
-float prevTemp = 0.0f, prevHum = 0.0f; // Previous temperature and humidity values
-ulong msSend = 0;                      // Last send time
-
-void printValues(uint16_t co2, float temp, float hum)
-{
-    Serial.print("Displaying CO2: ");
-    Serial.print(co2);
-    Serial.print(" ppm, Temp: ");
-    Serial.print(temp, 1);
-    Serial.print(" C, Humidity: ");
-    Serial.print(hum, 1);
-    Serial.println(" %");
-}
-
-void printTime(bool printItvMeasurement = true)
-{
-    ulong ms = millis() - msSend;
-    ulong totalSeconds = (ms + 500) / 1000; // Round milliseconds to nearest second
-    ulong minutes = (totalSeconds / 60) % 60;
-    ulong seconds = totalSeconds % 60;
-    Serial.print("Uptime: ");
-    if (minutes < 10)
-        Serial.print('0');
-    Serial.print(minutes);
-    Serial.print(':');
-    if (seconds < 10)
-        Serial.print('0');
-    Serial.print(seconds);
-    if (printItvMeasurement)
-        Serial.printf("\tMeasurement interval: %u seconds.", airSensor.getMeasurementInterval());
-    Serial.println();
 }
 
 // forced re-calibration for scd30 sensor
@@ -188,7 +189,6 @@ void setup()
     else
         Serial.println("Normal startup mode.");
     Serial.print("Waiting for first measurement data...");
-    airSensor.setMeasurementInterval(2);
     while (!airSensor.dataAvailable())
     {
         Serial.print('.');
@@ -233,21 +233,26 @@ void loop()
     if (airSensor.dataAvailable())
     {
         airSensor.readMeasurement();
-        auto co2 = airSensor.getCO2();
-        auto temp = airSensor.getTemperature();
-        auto hum = airSensor.getHumidity();
-        printValues(co2, temp, hum);
-        prevCO2 = co2;
-        prevTemp = temp;
-        prevHum = hum;
-        printTime();
+        // auto co2 = airSensor.getCO2();
+        // auto temp = airSensor.getTemperature();
+        // auto hum = airSensor.getHumidity();
+        // printValues(co2, temp, hum);
+        // prevCO2 = co2;
+        // prevTemp = temp;
+        // prevHum = hum;
+        // printTime();
+        airData.ECO2 = airSensor.getCO2();
+        airData.temperature = airSensor.getTemperature();   
+        airData.humidity = airSensor.getHumidity() + 0.5f; // Round humidity
+        printValues(airData.ECO2, airData.temperature, airData.humidity);
+        Serial.println(String(" @ ") + tss.getCurrentTime(millis()));
     }
     // if (tss.isTimeToSendData(millis()))
     if (tss.isTimeToSendData(millis()) || sendDataNow)
     {
-        airData.ECO2 = prevCO2;
-        airData.temperature = prevTemp;
-        airData.humidity = prevHum + 0.5f; // Round humidity
+        // airData.ECO2 = prevCO2;
+        // airData.temperature = prevTemp;
+        // airData.humidity = prevHum + 0.5f; // Round humidity
         if (airData.ECO2 == 0)
             logger.add("DCO2 value is 0, likely sensor read error. Data won't be sent.", tss.getCurrentTime(millis()));
         else
@@ -258,17 +263,14 @@ void loop()
                 logger.add("ESP-NOW send error: " + String(res), tss.getCurrentTime(millis()));
             msDataSent = millis();
             goToWaitPhase(true);
-            // if (tss.getSlotMin() >= 10)
-            //     airSensor.setMeasurementInterval(ITV_MEASURE_WAIT);
         }
-        // ledOnDelay(2);
-        delay(1000);
+        delay(2000);
         if (sendDataNow)
             sendDataNow = false;
         sendTimeRequest();
     }
-    if (tss.isTimeRespMissing(millis()))
-        sendTimeRequest();
+    // if (tss.isTimeRespMissing(millis()))
+    //     sendTimeRequest();
     if (millis() - msDataSent > ITV_WAIT * SECOND)
         goToWaitPhase(false);
 

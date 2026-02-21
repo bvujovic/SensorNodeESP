@@ -36,6 +36,7 @@ void TimeSlotSend::onTimeStringRecv(const uint8_t *data, int len, ulong currentM
         // printf("Seconds to next %d-minute mark + %d sec: %d\n", getSlotMin(), getSlotSec(), secs);
         msTimeToSendData = currentMillis + secs * 1000UL - itvSensorRead;
         msTimeReqSent = 0; // reset time request sent
+        msStrTime = currentMillis;
         isWakeUpTimeWrong = secs > secWakeUpTimeWrong;
         itvWrongTimeDiff = isWakeUpTimeWrong ? secs - secBeforeWakeup : UINT16_MAX;
     }
@@ -46,12 +47,12 @@ const char *TimeSlotSend::getCurrentTime(ulong currentMillis) const
     // Return current time string if it's received, otherwise return empty string
     if (strTime[0] == 0)
         return "";
-    // Calculate current time based on strTime, msTimeReqSent and currentMillis
+    // Calculate current time based on strTime, msStrTime and currentMillis
     int h, m, s;
     if (sscanf(strTime, "%d:%d:%d", &h, &m, &s) != 3)
         return "";
     ulong startSeconds = h * 3600 + m * 60 + s;
-    ulong ms = startSeconds * 1000 + currentMillis - msTimeReqSent;
+    ulong ms = startSeconds * 1000 + currentMillis - msStrTime;
     int seconds = ms / 1000;
     int hours = seconds / 3600;
     int minutes = (seconds % 3600) / 60;

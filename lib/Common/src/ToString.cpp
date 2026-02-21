@@ -25,6 +25,7 @@ const char *ToString::Devices[] = {
     "ESP8266 NodeMCU",
     "Main.Desk.CO2", // "WemosExtAnt"
     "Main.Desk.Air", // "ESP8266 Wemos 01"
+    "Main.Desk.CO2", // "ESP8266 Wemos 02"
     "ESP32 DevKit",  //
     "Kitchen.Sink",  // "ESP32 BattConn",
 };

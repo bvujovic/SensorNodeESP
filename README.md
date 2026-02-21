@@ -31,12 +31,15 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
     - [ ] Web App:
         - [ ] Improve interface (chart.js disappears, shrinks)
 - [ ] Clients:
-    - [ ] (WIP) Make a class with simple logging capabilites (take methods from SCD30), put it in lib/_Client [rename to _clients] and use it in SCD30 and ENS&DHT projects
-    - [ ] Change getDeepSleepTime() so that it takes into account wake time and time spent in sending data
-    - [ ] (OPT) Put retrying logic in a class
+    - [ ] ClientLogger
+        - [x] Create a class for clients with simple logging capabilities
+        - [ ] Use it in SCD30 and ENS&DHT projects
+    - [ ] (WIP) Put retrying logic in a class: Retryer
+    - [ ] TimeSlotSend
+        - [ ] Change getDeepSleepTime() so that it takes into account wake time and time spent in sending data
     - [ ] (OPT) Put TSS, LoggerMin and retrying logic in a class that will be used by most clients that report data regularly to the hub
     - [ ] (WIP) SCD30:
-        - [ ] (WIP) Try using TimeSlotSend class
+        - [x] Try using TimeSlotSend class
         - [ ] Button click: print log on Serial and send data (prev data or wait for new?) to the hub
     - [ ] esp32-wake-on-pin
         - [ ] Test this code with ESP32-C6 SuperMini when it arrives
@@ -48,8 +51,9 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
     - setPeers(): add new setPeer() call
         - setPeer(): set parameters: mac address, sensor type, device
     - Increase length of peers array: peer_info peers[]
-    - Add new members to arrays: StrSensorTypes[], SensorTypesComment[]
     - OnDataRecv(): if (p->type == SensorType::...)
+- lib/Common/src/ToString.cpp:
+    - Add new members to arrays: StrSensorTypes[], SensorTypesComment[]
 - Enums.h: Add new members to SensorType, Device
 - index.html:
     - CmbChartParamsChange(): adjusting chart for sensors with temp and hum

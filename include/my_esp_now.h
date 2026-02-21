@@ -6,7 +6,7 @@
 #include "Notification.h"
 #include "ToString.h"
 
-peer_info peers[5]; // ESP-NOW peers
+peer_info peers[6]; // ESP-NOW peers
 int cntPeers;       // peers count
 
 #define CMD_MILLIS ("millis")
@@ -32,12 +32,13 @@ void setPeers()
     lenCmdMillis = strlen(CMD_MILLIS);
     lenCmdTime = strlen(CMD_TIME);
     cntPeers = 0;
-    //TODO It would be good to be able to easily compile different versions with different clients: for Brdo, Vranić... (#if[def] ... ?)
+    // TODO It would be good to be able to easily compile different versions with different clients: for Brdo, Vranić... (#if[def] ... ?)
     setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::SCD30, Device::WemosExtAnt);
     setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
     setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32
     setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::UndefinedSensorType, Device::ESP8266NodeMCU); // test ESP8266
-    setPeer(peers + (cntPeers++), macEsp32BattConnUsbC, SensorType::SimpleEvent, Device::ESP32BattConn);       // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
+    setPeer(peers + (cntPeers++), macEsp32BattConnUsbC1, SensorType::SimpleEvent, Device::ESP32BattConn);       // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
+    setPeer(peers + (cntPeers++), macEsp8266Wemos2, SensorType::SCD30, Device::Wemos1);
     addPeers();
 }
 
@@ -105,8 +106,7 @@ bool burstDetected(const uint8_t *mac)
     else if (discardMsg) // end of burst
     {
         discardMsg = false;
-        sprintf(line, "Burst detected (%d messages) from MAC address %02X:%02X:%02X:%02X:%02X:%02X"
-            , cntBursts, lastMAC[0], lastMAC[1], lastMAC[2], lastMAC[3], lastMAC[4], lastMAC[5]);
+        sprintf(line, "Burst detected (%d messages) from MAC address %02X:%02X:%02X:%02X:%02X:%02X", cntBursts, lastMAC[0], lastMAC[1], lastMAC[2], lastMAC[3], lastMAC[4], lastMAC[5]);
         logger.add("HUB", "HUB", line); // log burst end
         cntBursts = 0;
     }
@@ -120,6 +120,14 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     if (burstDetected(mac))
         return;
 
+    if (len == lenCmdTime && strncmp((const char *)incomingData, CMD_TIME, lenCmdTime) == 0)
+    {
+        getLocalTime(&ti);
+        strftime(line, sizeof(line), "%H:%M:%S", &ti);
+        esp_now_send(mac, (uint8_t *)line, strlen(line));
+        return;
+    }
+
     auto p = findPeer(mac);
     if (p != NULL)
     {
@@ -128,13 +136,13 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         // response to ESP-NOW command/request: millis, time
         if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
             peerRespMillis = p;
-        if (len == lenCmdTime && strncmp((const char *)incomingData, CMD_TIME, lenCmdTime) == 0)
-        {
-            getLocalTime(&ti);
-            strftime(line, sizeof(line), "%H:%M:%S", &ti);
-            esp_now_send(p->peer_addr, (uint8_t *)line, strlen(line));
-            return;
-        }
+        // if (len == lenCmdTime && strncmp((const char *)incomingData, CMD_TIME, lenCmdTime) == 0)
+        // {
+        //     getLocalTime(&ti);
+        //     strftime(line, sizeof(line), "%H:%M:%S", &ti);
+        //     esp_now_send(p->peer_addr, (uint8_t *)line, strlen(line));
+        //     return;
+        // }
         // handling data from nodes (sensors)
         if (p->type == SensorType::EnsDht)
         {

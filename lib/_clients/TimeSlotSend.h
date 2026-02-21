@@ -22,6 +22,7 @@ private:
     uint16_t itvWrongTimeDiff = UINT16_MAX; // (seconds) Difference in seconds if wake-up time is wrong
 
     char strTime[9] = ""; // buffer for time string "HH:MM:SS"
+    ulong msStrTime = 0;  // time when strTime was set
 
 public:
     /// @brief Construct a new Time Slot Send object
