@@ -9,9 +9,9 @@
 peer_info peers[6]; // ESP-NOW peers
 int cntPeers;       // peers count
 
+// peer_info *peerRespMillis = NULL; // send millis to this peer
 #define CMD_MILLIS ("millis")
-int lenCmdMillis;                 // length of (string) "millis" command
-peer_info *peerRespMillis = NULL; // send millis to this peer
+int lenCmdMillis; // length of (string) "millis" command
 #define CMD_TIME ("time")
 int lenCmdTime; // length of (string) "time" command
 
@@ -37,7 +37,7 @@ void setPeers()
     setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
     setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32
     setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::UndefinedSensorType, Device::ESP8266NodeMCU); // test ESP8266
-    setPeer(peers + (cntPeers++), macEsp32BattConnUsbC1, SensorType::SimpleEvent, Device::ESP32BattConn);       // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
+    setPeer(peers + (cntPeers++), macEsp32BattConnUsbC1, SensorType::SimpleEvent, Device::ESP32BattConn);      // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
     setPeer(peers + (cntPeers++), macEsp8266Wemos2, SensorType::SCD30, Device::Wemos1);
     addPeers();
 }
@@ -120,11 +120,21 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     if (burstDetected(mac))
         return;
 
+    // response to ESP-NOW command/request: time, millis
     if (len == lenCmdTime && strncmp((const char *)incomingData, CMD_TIME, lenCmdTime) == 0)
     {
         getLocalTime(&ti);
         strftime(line, sizeof(line), "%H:%M:%S", &ti);
         esp_now_send(mac, (uint8_t *)line, strlen(line));
+        return;
+    }
+    if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
+    {
+        // peerRespMillis = findPeer(mac);
+        // return millis() as ulong (4 bytes) instead of string, to avoid issues with millis() overflow after ~49 days
+
+        auto ms = millis();
+        esp_now_send(mac, (uint8_t *)&ms, sizeof(ms));
         return;
     }
 
@@ -133,16 +143,9 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     {
         Serial.printf("Data received from %s @ %s, len: %d\n", ToString::SensorTypes[p->type], ToString::Devices[p->device], len);
 
-        // response to ESP-NOW command/request: millis, time
-        if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
-            peerRespMillis = p;
-        // if (len == lenCmdTime && strncmp((const char *)incomingData, CMD_TIME, lenCmdTime) == 0)
-        // {
-        //     getLocalTime(&ti);
-        //     strftime(line, sizeof(line), "%H:%M:%S", &ti);
-        //     esp_now_send(p->peer_addr, (uint8_t *)line, strlen(line));
-        //     return;
-        // }
+        // if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
+        //     peerRespMillis = p;
+
         // handling data from nodes (sensors)
         if (p->type == SensorType::EnsDht)
         {

@@ -61,13 +61,13 @@ uint8_t macFail[] = {0x78, 0x1C, 0x3C, 0xCA, 0xF3, 0x33}; // Non-existent MAC fo
 TimeSlotSend tss(ITV_TIME_SLOT_MIN, ITV_TIME_SLOT_SEC, 0, 0, 0);
 #include "ClientLogger.h"
 ClientLogger logger;
-#include "Retryer.h"
-Retryer rtrData(4, 2000, 2000); // 2 retries, 2s between, 2s response timeout
-#include "OneButton.h"          // lib_deps = mathertel/OneButton@^2.0.0
-OneButton btn(D6, true);        // click: send data, 2click: print log, long click: clear log
+#include "OneButton.h"   // lib_deps = mathertel/OneButton@^2.0.0
+OneButton btn(D6, true); // click: send data, 2click: print log, long click: clear log
 bool sendDataNow = false;
 
-// D ulong msSend = 0; // Last send time
+// int prevCO2 = 0;                       // Previous CO2 value
+// float prevTemp = 0.0f, prevHum = 0.0f; // Previous temperature and humidity values
+ulong msSend = 0;                      // Last send time
 ulong msDataSent = 0;
 bool isInWaitPhase = false;
 
@@ -81,6 +81,26 @@ void printValues(uint16_t co2, float temp, float hum)
     Serial.print(hum, 1);
     Serial.print(" %");
 }
+
+// D
+// void printTime(bool printItvMeasurement = true)
+// {
+//     ulong ms = millis() - msSend;
+//     ulong totalSeconds = (ms + 500) / 1000; // Round milliseconds to nearest second
+//     ulong minutes = (totalSeconds / 60) % 60;
+//     ulong seconds = totalSeconds % 60;
+//     Serial.print("Uptime: ");
+//     if (minutes < 10)
+//         Serial.print('0');
+//     Serial.print(minutes);
+//     Serial.print(':');
+//     if (seconds < 10)
+//         Serial.print('0');
+//     Serial.print(seconds);
+//     if (printItvMeasurement)
+//         Serial.printf("\tMeasurement interval: %u seconds.", airSensor.getMeasurementInterval());
+//     Serial.println();
+// }
 
 void goToWaitPhase(bool b)
 {
@@ -105,15 +125,8 @@ void sendTimeRequest()
 
 void OnDataSent(uint8_t *mac, uint8_t sendStatus)
 {
-    auto isDataReq = msDataSent > tss.getMsTimeReqSent(); // last esp_now_send() call is for data, not time
     if (sendStatus != 0)
-        logger.add("ESP-NOW last packet send FAILED, request: " + String(isDataReq ? "data" : "time"));
-    if (isDataReq)
-    {
-        rtrData.onSendResult(sendStatus == 0);
-        if (sendStatus == 0) // since there is no response for data req - success on send counts as this
-            rtrData.onResponseReceived();
-    }
+        logger.add("ESP-NOW last packet send FAILED, status: " + String(sendStatus));
 }
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
@@ -220,14 +233,26 @@ void loop()
     if (airSensor.dataAvailable())
     {
         airSensor.readMeasurement();
+        // auto co2 = airSensor.getCO2();
+        // auto temp = airSensor.getTemperature();
+        // auto hum = airSensor.getHumidity();
+        // printValues(co2, temp, hum);
+        // prevCO2 = co2;
+        // prevTemp = temp;
+        // prevHum = hum;
+        // printTime();
         airData.ECO2 = airSensor.getCO2();
-        airData.temperature = airSensor.getTemperature();
+        airData.temperature = airSensor.getTemperature();   
         airData.humidity = airSensor.getHumidity() + 0.5f; // Round humidity
         printValues(airData.ECO2, airData.temperature, airData.humidity);
         Serial.println(String(" @ ") + tss.getCurrentTime(millis()));
     }
-    if (rtrData.readyToSend() && (tss.isTimeToSendData(millis()) || sendDataNow))
+    // if (tss.isTimeToSendData(millis()))
+    if (tss.isTimeToSendData(millis()) || sendDataNow)
     {
+        // airData.ECO2 = prevCO2;
+        // airData.temperature = prevTemp;
+        // airData.humidity = prevHum + 0.5f; // Round humidity
         if (airData.ECO2 == 0)
             logger.add("DCO2 value is 0, likely sensor read error. Data won't be sent.", tss.getCurrentTime(millis()));
         else
@@ -237,7 +262,6 @@ void loop()
             if (res != 0)
                 logger.add("ESP-NOW send error: " + String(res), tss.getCurrentTime(millis()));
             msDataSent = millis();
-            rtrData.onSendResult(res == 0);
             goToWaitPhase(true);
         }
         delay(2000);
@@ -245,14 +269,6 @@ void loop()
             sendDataNow = false;
         sendTimeRequest();
     }
-    if (rtrData.stateEnd())
-    {
-        Serial.println(rtrData.state() == Retryer::State::Success
-                           ? "Message exchange successful!\n"
-                           : "Exchange failed.\n");
-        rtrData.reset();
-    }
-    rtrData.update();
     // if (tss.isTimeRespMissing(millis()))
     //     sendTimeRequest();
     if (millis() - msDataSent > ITV_WAIT * SECOND)

@@ -11,7 +11,7 @@ void Retryer::update()
             scheduleRetry();
         break;
     case State::Idle:
-    case State::Sending:
+    case State::ReadyToSend:
     case State::Success:
     case State::Failed:
     default:
@@ -20,13 +20,13 @@ void Retryer::update()
 
     if (_state == State::Idle && _attempt < _maxRetries && now - _lastRetryTime >= _retryDelay)
     {
-        _state = State::Sending;
+        _state = State::ReadyToSend;
     }
 }
 
 void Retryer::onSendResult(bool success)
 {
-    if (_state != State::Sending)
+    if (_state != State::ReadyToSend)
         return;
 
     if (!success)

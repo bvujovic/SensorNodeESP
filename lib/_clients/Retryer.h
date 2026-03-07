@@ -7,7 +7,7 @@ public:
     enum class State
     {
         Idle,
-        Sending,
+        ReadyToSend,
         WaitingForResponse,
         Success,
         Failed
@@ -26,13 +26,13 @@ public:
     void start()
     {
         reset();
-        _state = State::Sending;
+        _state = State::ReadyToSend;
     }
 
-    void update();    
+    void update();
 
     // Call after esp_now_send()
-    void onSendResult(bool success);    
+    void onSendResult(bool success);
 
     // Call from OnDataRecv()
     void onResponseReceived()
@@ -41,7 +41,10 @@ public:
             _state = State::Success;
     }
 
-    bool readyToSend() const { return _state == State::Sending; }
+    bool readyToSend() const { return _state == State::ReadyToSend; }
+
+    // Returns true if exchange ended with either success or failure
+    bool stateEnd() const { return _state == State::Success || _state == State::Failed; }
 
     State state() const { return _state; }
 

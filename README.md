@@ -27,22 +27,21 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
 
 ## TODO
 - [ ] Hub:
+    - [ ] (TEST) Does millis command returns ulong millis() on hub/server? Use retrying_retryer.cpp
     - [ ] Make 2nd version of Hub project - Hub /wo internet for places without internet access or with unknown net credentials. Communication with clients is done via ESP-NOW or radio (HC-12, LoRa, http...). Maybe it could have its own wireless network for web app access?
     - [ ] Web App:
         - [ ] Improve interface (chart.js disappears, shrinks)
 - [ ] Clients:
     - [ ] ClientLogger
-        - [x] Create a class for clients with simple logging capabilities
         - [ ] Use it in SCD30 and ENS&DHT projects
     - [ ] (WIP) Put retrying logic in a class: Retryer
     - [ ] TimeSlotSend
         - [ ] Change getDeepSleepTime() so that it takes into account wake time and time spent in sending data
     - [ ] (OPT) Put TSS, LoggerMin and retrying logic in a class that will be used by most clients that report data regularly to the hub
     - [ ] (WIP) SCD30:
-        - [x] Try using TimeSlotSend class
         - [ ] Button click: print log on Serial and send data (prev data or wait for new?) to the hub
     - [ ] esp32-wake-on-pin
-        - [ ] Test this code with ESP32-C6 SuperMini when it arrives
+        - [ ] Test this code with SuperMini modules (C3, C6, S3)
     - [ ] Add more sensor nodes
         - [ ] Microphone (noise levels)
 

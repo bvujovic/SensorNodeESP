@@ -11,15 +11,19 @@
 #include <Arduino.h>
 #include "esp_sleep.h"
 
+// Pick one of the following boards:
+#define ESP32_C3 true
+// #define ESP32_S3 false
+
 #define MSG_TEXT "Water detected!"
 #define MAX_SEND_ATTEMPTS 3
 #define SEC_REPEAT_SEND_DELAY 4 /* Interval in seconds between send attempts */
 #define MIN_COOL_DOWN 20        /* Device will not respond to pin events for this many minutes */
-// Level that indicate a wake LOW/HIGH. E.g. INPUT_PULLUP and button to ground -> this should be 0 (LOW).
+// Level that indicate a wake: LOW/HIGH. E.g. INPUT_PULLUP and button to ground -> this should be 0 (LOW).
 #define ACTIVE_LEVEL LOW
 
-const gpio_num_t pinWake = GPIO_NUM_14; // <- choose an RTC-capable pin
-const byte pinLed = 22;                 // On-board LED (change if needed)
+const gpio_num_t pinWake = ESP32_C3 ? GPIO_NUM_4 : GPIO_NUM_14;
+const byte pinLed = ESP32_C3 ? 8 : 22; // On-board LED
 void ledOn(bool on) { digitalWrite(pinLed, !on); }
 
 #include <esp_now.h>
@@ -58,9 +62,16 @@ bool validateWakePin()
 void goToSleep()
 {
     // Reconfigure pin to proper input with pull resistor to avoid floating while sleeping
-    pinMode((int)pinWake, ACTIVE_LEVEL == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
-    // Use EXT0 to wake from a single RTC pin. level param: 0 => wake on LOW, 1 => wake on HIGH
-    esp_sleep_enable_ext0_wakeup(pinWake, ACTIVE_LEVEL);
+    //? pinMode((int)pinWake, ACTIVE_LEVEL == LOW ? INPUT_PULLUP : INPUT_PULLDOWN);
+
+#if ESP32_C3
+    // Enable GPIO wakeup
+    gpio_wakeup_enable(pinWake, ACTIVE_LEVEL == LOW ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+    // Enable wakeup source
+    esp_deep_sleep_enable_gpio_wakeup(1 << pinWake, ACTIVE_LEVEL == LOW ? ESP_GPIO_WAKEUP_GPIO_LOW : ESP_GPIO_WAKEUP_GPIO_HIGH);
+#else
+    esp_sleep_enable_ext0_wakeup(pinWake, ACTIVE_LEVEL); // Use EXT0 to wake from a single RTC pin. level param: 0 => wake on LOW, 1 => wake on HIGH
+#endif
     Serial.println("Going to deep sleep now.");
     delay(100);
     esp_deep_sleep_start();
@@ -85,13 +96,19 @@ void setup()
     // delay(500);
     ledOn(false);
 
-    esp_sleep_wakeup_cause_t wakeReason = esp_sleep_get_wakeup_cause();
+    auto wakeReason = esp_sleep_get_wakeup_cause();
     Serial.printf("Wakeup reason: %d\n", (int)wakeReason);
     // Prepare the wake pin as input and internal pull (so it's not floating)
-    pinMode((int)pinWake, ACTIVE_LEVEL == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
+    pinMode((int)pinWake, ACTIVE_LEVEL == LOW ? INPUT_PULLUP : INPUT_PULLDOWN);
+// if (wakeReason == ESP_SLEEP_WAKEUP_EXT0)
+// if (ESP32_C3 && wakeReason == ESP_SLEEP_WAKEUP_GPIO || !ESP32_C3 && wakeReason == ESP_SLEEP_WAKEUP_EXT0)
+#if ESP32_C3
+    if (wakeReason == ESP_SLEEP_WAKEUP_GPIO)
+#else
     if (wakeReason == ESP_SLEEP_WAKEUP_EXT0)
+#endif
     {
-        Serial.println("Woke from EXT0 wakeup. Validating pin...");
+        Serial.println("Woke up from GPIO. Validating pin...");
         delay(10); // Give the pin a moment to settle, then sample to filter noise
         auto valid = validateWakePin();
         if (!valid)

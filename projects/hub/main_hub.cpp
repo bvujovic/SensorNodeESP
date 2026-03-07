@@ -211,15 +211,13 @@ String message;
 void loop()
 {
     // ESP-NOW: reply to "millis" command
-    // TODO try to move this code to ESP-NOW:Receive method
-    if (peerRespMillis != NULL)
-    {
-        // TODO vratiti odgovor samo ako je millis() < 4mlrd ili tako nesto - da se ne bi desio overflow u toku merenja vremena
-        ulong ms = millis();
-        ultoa(ms, line, 10);
-        esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
-        peerRespMillis = NULL;
-    }
+    // if (peerRespMillis != NULL)
+    // {
+    //     ulong ms = millis();
+    //     ultoa(ms, line, 10);
+    //     esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
+    //     peerRespMillis = NULL;
+    // }
     // ESP-NOW: handle Simple Event messages
     if (seh.isNewMessageReceived())
     {
