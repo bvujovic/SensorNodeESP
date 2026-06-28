@@ -28,4 +28,5 @@ const char *ToString::Devices[] = {
     "Main.Desk.CO2", // "ESP8266 Wemos 02"
     "ESP32 DevKit",  //
     "Kitchen.Sink",  // "ESP32 BattConn",
+    "Vranic.SuperMiniBlue", // "ESP32C3 Super Mini (blue), larger ceramic antenna",
 };

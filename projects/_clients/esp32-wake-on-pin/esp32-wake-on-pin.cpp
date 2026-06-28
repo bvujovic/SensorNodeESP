@@ -2,28 +2,30 @@
 //* to a predefined MAC address and then goes back to deep sleep.
 /*
     ESP32 Deep Sleep Wake on Pin
-  NOTES:
+  ESP32 (regular):
   - Use an RTC-capable GPIO for WAKE_PIN. Common RTC GPIOs on many ESP32 boards:
       0, 2, 4, 12, 13, 14, 15, 25, 26, 27 (Check your exact module's datasheet if unsure.)
   - ext0/EXT0 (esp_sleep_enable_ext0_wakeup) supports one RTC pin and wakes on level.
+  ESP32-C3: use 3, 4 or maybe some of other pins.
+
+Supported boards:
+CONFIG_IDF_TARGET_ESP32
+CONFIG_IDF_TARGET_ESP32C3
+//CONFIG_IDF_TARGET_ESP32S3
 */
 
 #include <Arduino.h>
 #include "esp_sleep.h"
-
-// Pick one of the following boards:
-#define ESP32_C3 true
-// #define ESP32_S3 false
 
 #define MSG_TEXT "Water detected!"
 #define MAX_SEND_ATTEMPTS 3
 #define SEC_REPEAT_SEND_DELAY 4 /* Interval in seconds between send attempts */
 #define MIN_COOL_DOWN 20        /* Device will not respond to pin events for this many minutes */
 // Level that indicate a wake: LOW/HIGH. E.g. INPUT_PULLUP and button to ground -> this should be 0 (LOW).
-#define ACTIVE_LEVEL LOW
+#define ACTIVE_LEVEL HIGH
 
-const gpio_num_t pinWake = ESP32_C3 ? GPIO_NUM_4 : GPIO_NUM_14;
-const byte pinLed = ESP32_C3 ? 8 : 22; // On-board LED
+const gpio_num_t pinWake = CONFIG_IDF_TARGET_ESP32C3 ? GPIO_NUM_4 : GPIO_NUM_14;
+const byte pinLed = CONFIG_IDF_TARGET_ESP32C3 ? 8 : 22; // On-board LED
 void ledOn(bool on) { digitalWrite(pinLed, !on); }
 
 #include <esp_now.h>
@@ -64,7 +66,7 @@ void goToSleep()
     // Reconfigure pin to proper input with pull resistor to avoid floating while sleeping
     //? pinMode((int)pinWake, ACTIVE_LEVEL == LOW ? INPUT_PULLUP : INPUT_PULLDOWN);
 
-#if ESP32_C3
+#if CONFIG_IDF_TARGET_ESP32C3
     // Enable GPIO wakeup
     gpio_wakeup_enable(pinWake, ACTIVE_LEVEL == LOW ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
     // Enable wakeup source
@@ -92,17 +94,13 @@ void setup()
     Serial.begin(115200);
     delay(10); // allow Serial to start
     pinMode(pinLed, OUTPUT);
-    // ledOn(true);
-    // delay(500);
     ledOn(false);
 
     auto wakeReason = esp_sleep_get_wakeup_cause();
     Serial.printf("Wakeup reason: %d\n", (int)wakeReason);
     // Prepare the wake pin as input and internal pull (so it's not floating)
     pinMode((int)pinWake, ACTIVE_LEVEL == LOW ? INPUT_PULLUP : INPUT_PULLDOWN);
-// if (wakeReason == ESP_SLEEP_WAKEUP_EXT0)
-// if (ESP32_C3 && wakeReason == ESP_SLEEP_WAKEUP_GPIO || !ESP32_C3 && wakeReason == ESP_SLEEP_WAKEUP_EXT0)
-#if ESP32_C3
+#if CONFIG_IDF_TARGET_ESP32C3
     if (wakeReason == ESP_SLEEP_WAKEUP_GPIO)
 #else
     if (wakeReason == ESP_SLEEP_WAKEUP_EXT0)
@@ -117,6 +115,9 @@ void setup()
         {
             Serial.println("Valid wake detected.");
             WiFi.mode(WIFI_STA);
+#if CONFIG_IDF_TARGET_ESP32C3
+            WiFi.setTxPower(WIFI_POWER_13dBm); // adjust power for wifi antenna, default is max power
+#endif
             if (esp_now_init() != ESP_OK)
             {
                 Serial.println("ESP NOW INIT FAIL");
@@ -135,7 +136,6 @@ void setup()
             char message[80];
             sprintf(message, "%lu;%s", msgId, MSG_TEXT);
             printf("Sending message: '%s'...\n", message);
-            // fflush(stdout);
             auto cntSendAttempt = 1;
             while (true)
             {
@@ -146,7 +146,6 @@ void setup()
             }
             printf("Cool down period - device will not respond to pin events for %.1f minutes.\n", (float)MIN_COOL_DOWN);
             delay(100);
-            // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
             esp_sleep_enable_timer_wakeup(MIN_COOL_DOWN * 60 * 1000000ULL);
             esp_deep_sleep_start();
         }

@@ -1,5 +1,8 @@
 #pragma once
 
+// #define BANOVO_BRDO
+#define VRANIC
+
 //TODO Pogledati https://stackoverflow.com/questions/11714325/how-to-get-enum-item-name-from-its-value
 
 /// @brief Type of sensor. What kind of data is sent/received: weather, room temp/CO2..., PIR/water detection...
@@ -19,7 +22,8 @@ enum SensorType
     BME680,
     /// @brief Data from SCD30 sensor: CO2, temp, hum... (AirData)
     SCD30,
-    SensorTypeCount // number of sensor types
+    /// @brief Number of sensor types
+    SensorTypeCount
 };
 
 enum Device
@@ -31,6 +35,7 @@ enum Device
     Wemos2,
     ESP32DevKit,
     ESP32BattConn,
+    ESP32C3SuperMiniBlue,
 };
 
 /// @brief Depending on event type hub will handle data differently: log data, send WA notification, buzz...
