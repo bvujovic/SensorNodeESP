@@ -31,12 +31,14 @@ void ledOn(bool on) { digitalWrite(pinLed, !on); }
 
 #include <esp_now.h>
 #include <WiFi.h>
+#include <esp_wifi.h> // Required for esp_wifi_ functions
 #include "Enums.h"
 #include "MacAddresses.h"
 #if defined(BANOVO_BRDO)
 uint8_t *mac = macSoftEsp32DevIpex;
 #elif defined(VRANIC)
 uint8_t *mac = macEsp32BattConnVranic;
+// uint8_t *mac = macSoftEsp32BattConnVranic;
 #endif
 bool sendSuccess = true;
 ulong msStart = 0;
@@ -108,6 +110,14 @@ void sendEspNowMessage()
 {
   cntSendAttempt++;
   WiFi.mode(WIFI_STA);
+
+  // // 2. FORCE the "Home" channel to 4
+  // // We do this by disconnecting and setting the channel via esp_wifi
+  // WiFi.disconnect();
+  // esp_wifi_set_promiscuous(true);
+  // esp_wifi_set_channel(4, WIFI_SECOND_CHAN_NONE);
+  // esp_wifi_set_promiscuous(false);
+
 #if CONFIG_IDF_TARGET_ESP32C3
   WiFi.setTxPower(WIFI_POWER_13dBm); // adjust power for wifi antenna, default is max power
 #endif
@@ -118,7 +128,7 @@ void sendEspNowMessage()
   }
   esp_now_register_send_cb(OnDataSent);
   memcpy(peerInfo.peer_addr, mac, 6);
-  peerInfo.channel = 0;
+  peerInfo.channel = 0; // use current channel
   peerInfo.encrypt = false;
   if (esp_now_add_peer(&peerInfo) != ESP_OK)
   {
@@ -138,8 +148,12 @@ void setup()
 {
   Serial.begin(115200);
   delay(10); // allow Serial to start
+  // Serial.println("start1");
   pinMode(pinLed, OUTPUT);
+  // ledOn(true);
+  // delay(5000);
   ledOn(false);
+  // Serial.println("start2");
 
   auto wakeReason = esp_sleep_get_wakeup_cause();
   Serial.printf("Wakeup reason: %d\n", (int)wakeReason);

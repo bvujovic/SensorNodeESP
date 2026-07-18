@@ -41,6 +41,7 @@ void setPeers()
   setPeer(peers + (cntPeers++), macEsp8266Wemos2, SensorType::SCD30, Device::Wemos1);
 #elif defined(VRANIC)
   setPeer(peers + (cntPeers++), macEsp32C3SuperMiniBlue, SensorType::SimpleEvent, Device::ESP32C3SuperMiniBlue);
+  setPeer(peers + (cntPeers++), macEsp32C3ant1, SensorType::TempHumSensor, Device::ESP32C3ant1);
 #endif
   addPeers();
 }
@@ -59,11 +60,12 @@ void addPeers()
     // memcpy(peer->peer_addr, p.peer_addr, 6);
     memcpy(peer->peer_addr, peers[i].peer_addr, 6);
     peer->encrypt = false;
-#if defined(BANOVO_BRDO)
     peer->channel = 1;
-#elif defined(VRANIC)
-    peer->channel = 4;
-#endif
+    // #if defined(BANOVO_BRDO)
+    //     peer->channel = 1;
+    // #elif defined(VRANIC)
+    //     peer->channel = 4;
+    // #endif
     auto res = esp_now_add_peer(peer);
     if (res == ESP_OK)
       Serial.printf("\t%s\n", ToString::Devices[peers[i].device]);
@@ -105,6 +107,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 // discard batch messages (less than 1sec from the last one) from the same MAC address
 bool burstDetected(const uint8_t *mac)
 {
+  // Serial.println("burstDetected start");
   static uint8_t lastMAC[MAC_LEN];
   static unsigned long lastTime = 0;
   unsigned long now = millis();
@@ -124,6 +127,7 @@ bool burstDetected(const uint8_t *mac)
   }
   memcpy(lastMAC, mac, MAC_LEN);
   lastTime = now;
+  // Serial.println("burstDetected end");
   return discardMsg;
 }
 
@@ -183,11 +187,20 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         buzzer.blinkWarning();
       logger.add(ToString::SensorTypes[p->type], ToString::Devices[p->device], line);
     }
+    else if (p->type == SensorType::TempHumSensor)
+    {
+      AirData ad;
+      memcpy(&ad, incomingData, len);
+      sprintf(line, "%.1f;%u", ad.temperature, ad.humidity);
+      Serial.println(line);
+      logger.add(ToString::SensorTypes[p->type], ToString::Devices[p->device], line);
+    }
     else if (p->type == SensorType::SimpleEvent)
     {
       memcpy(line, incomingData, len);
       line[len] = '\0';
       seh.newMessage(line, p);
+      // Serial.println("back from seh.newMessage()");
     }
   }
   else

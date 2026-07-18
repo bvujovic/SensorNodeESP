@@ -18,8 +18,8 @@ Notification notifications[] = {
     {AQI5, "Air quality: AQI >= 5", 0, 0},
 };
 
-/// @brief Gets the notification, given its id (EnumNots).
-Notification *GetNotif(EnumNots e)
+/// @brief Gets the notification, given its id (EnumNotification).
+Notification *GetNotif(EnumNotification e)
 {
     for (auto &&n : notifications)
         if (n.id == e)

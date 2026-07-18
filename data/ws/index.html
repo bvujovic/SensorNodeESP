@@ -213,6 +213,10 @@
             res = GetLastValues(lines, "EnsDht", 4);
             if (res != null)
                 lastValues.push("EnsDht: " + res); // "EnsDht (TVOC): "
+            res = GetLastValues(lines, "TempHum", 0); //* THIS DOESN'T WORK!
+            if (res != null)
+                lastValues.push("TempHum: " + res); // "TempHum (temp)"
+              
             spnLastValues.innerHTML = 'Last values → ' + lastValues.join(', ');
         }
 
@@ -348,7 +352,7 @@
                 });
                 chart.options.scales.y.min = 0;
                 chart.options.scales.y.ticks.stepSize = undefined;
-                if (cmbSensors.value == 'EnsDht' || cmbSensors.value == 'BME680' || cmbSensors.value == 'SCD30') {
+                if (cmbSensors.value == 'EnsDht' || cmbSensors.value == 'TempHum' || cmbSensors.value == 'SCD30') {
                     if (cmbChartParams.value == 0) { // temp
                         // const validYs = ys.filter(v => !isNaN(v));
                         // chart.options.scales.y.min = Math.min(...validYs) - 1;
@@ -369,7 +373,7 @@
 
         //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
         //* default parameters: TVOC, temp
-        const lastChartParam = { EnsAht: 4, Temp: 0, EnsDht: 4, BME680: 4, SCD30: 2 };
+        const lastChartParam = { EnsAht: 4, TempHum: 0, EnsDht: 4, BME680: 4, SCD30: 2 };
 
         function RefreshFile() {
             // console.log("Folder: " + cmbFolders.value + ", File: " + cmbFiles.value + ", Sensor: " + cmbSensors.value);

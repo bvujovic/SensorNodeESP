@@ -62,7 +62,7 @@ void wifiConfig(bool isStaticIP)
 {
   if (isStaticIP)
   {
-  // WiFi.channel(1); // set channel to 1, so ESP-NOW and WiFi AP are on the same channel
+    // WiFi.channel(1); // set channel to 1, so ESP-NOW and WiFi AP are on the same channel
 #if defined(BANOVO_BRDO)
     IPAddress ipa(192, 168, 0, lastIpNumber);
     IPAddress gateway(192, 168, 0, 254);
@@ -186,7 +186,7 @@ void setup()
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 #elif defined(VRANIC)
   WiFi.begin(WIFI_SSID_MTS_UMKA, WIFI_PASS_MTS_UMKA);
-  // WiFi.begin(WIFI_SSID_MTS_UMKA, WIFI_PASS_MTS_UMKA, 1);
+  // WiFi.begin(WIFI_SSID_MTS_UMKA, WIFI_PASS_MTS_UMKA, 11); // this doesn't work
 #endif
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED)
@@ -245,28 +245,37 @@ void loop()
   // ESP-NOW: handle Simple Event messages
   if (seh.isNewMessageReceived())
   {
-    // Serial.printf("Simple Event received from %s: %s\n", seh.getDeviceName(), seh.getMessageText());
+    Serial.println("main hub: seh.isNewMessageReceived()");
     auto peer = seh.getPeerInfo();
-    if (peer->device == Device::ESP32BattConn)
+    // Serial.println(peer != NULL);
+    // Serial.println(peer->device);
+    if (peer != NULL)
     {
-      auto notif = GetNotif(WaterDetected);
-      if (notif != NULL)
+// #ifdef BANOVO_BRDO
+      if (peer->device == Device::ESP32BattConn)
+// #elif defined(VRANIC)
+      // if (peer->device == Device::ESP32C3SuperMiniBlue)
+// #endif
       {
-        if (notif->wa_msg)
+        auto notif = GetNotif(WaterDetected);
+        if (notif != NULL)
         {
-          wifiConfig(false);
-          delay(3000);
-          // 💥Stan, kuhinja, sudopera:
-          // VISOK NIVO VODE U SUDOPERI 💦
-          auto res = NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
-          if (res != 200)
-            logger.add("NotifyWhatsApp", "ESP32Hub", (String("WhatsApp message sent, resp code: ") + res).c_str());
-          wifiConfig(true);
+          if (notif->wa_msg)
+          {
+            wifiConfig(false);
+            delay(3000);
+            // 💥Stan, kuhinja, sudopera:
+            // VISOK NIVO VODE U SUDOPERI 💦
+            auto res = NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
+            if (res != 200) // 200 = OK, log if not OK
+              logger.add("NotifyWhatsApp", "ESP32Hub", (String("WhatsApp message sent, resp code: ") + res).c_str());
+            wifiConfig(true);
+          }
+          if (notif->buzz)
+            buzzer.blinkCritical();
         }
-        if (notif->buzz)
-          buzzer.blinkCritical();
+        logger.add(ToString::SensorTypes[peer->type], ToString::Devices[peer->device], seh.getMessageText());
       }
-      logger.add(ToString::SensorTypes[peer->type], ToString::Devices[peer->device], seh.getMessageText());
     }
     seh.clearEventData();
   }
