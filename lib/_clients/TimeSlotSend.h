@@ -37,8 +37,11 @@ public:
     }
 
     uint8_t getSlotMin() const { return slotMin; }
+    void setSlotMin(uint8_t min) { slotMin = min; }
     uint8_t getSlotSec() const { return slotSec; }
+    void setSlotSec(uint8_t sec) { slotSec = sec; }
     int16_t getSecBeforeWakeup() const { return secBeforeWakeup; }
+    void setSecBeforeWakeup(int16_t sec) { secBeforeWakeup = sec; }
     uint16_t getItvSensorRead() const { return itvSensorRead; }
     uint16_t getSecWakeUpTimeWrong() const { return secWakeUpTimeWrong; }
     uint16_t getItvWrongTimeDiff() const { return itvWrongTimeDiff; }

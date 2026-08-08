@@ -21,7 +21,11 @@ Logger logger;
 AsyncWebServer server(80);
 
 #include "MyBlinky.h"
+#if defined(BANOVO_BRDO)
 MyBlinky buzzer(18);
+#elif defined(VRANIC)
+MyBlinky buzzer(14);
+#endif
 
 #define SECOND (1000UL)
 #define MY_NTP_SERVER "rs.pool.ntp.org"
@@ -49,9 +53,9 @@ ulong msLastTimeSync = 0;
 // callback function to show when NTP was synchronized
 void cbSyncTime(struct timeval *tv)
 {
-  // Serial.println(F(" *** NTP time synched! *** "));
+  Serial.println(F(" *** NTP time synched! *** "));
   msLastTimeSync = millis();
-  // Serial.println(msLastTimeSync);
+  Serial.println(msLastTimeSync);
 }
 
 #include "TimeWatcher.h"
@@ -63,20 +67,118 @@ void wifiConfig(bool isStaticIP)
   if (isStaticIP)
   {
     // WiFi.channel(1); // set channel to 1, so ESP-NOW and WiFi AP are on the same channel
+
+    // #if defined(BANOVO_BRDO)
+    //     IPAddress local_ip(192, 168, 0, lastIpNumber);
+    //     IPAddress gateway(192, 168, 0, 254);
+    // #elif defined(VRANIC)
+    //     IPAddress local_ip(192, 168, 1, lastIpNumber);
+    //     IPAddress gateway(192, 168, 1, 254);
+    // #endif
+    //     IPAddress subnet(255, 255, 255, 0);
+
+    //     // IPAddress dns1(8, 8, 8, 8);
+    //     // IPAddress dns2(8, 8, 4, 4);
+    //     //* Change these to use your gateway directly for DNS resolution
+    //     IPAddress dns1 = gateway;
+    //     IPAddress dns2(8, 8, 8, 8); // Keep Google as a backup secondary
+
 #if defined(BANOVO_BRDO)
-    IPAddress ipa(192, 168, 0, lastIpNumber);
-    IPAddress gateway(192, 168, 0, 254);
+    IPAddress local_ip(192, 168, 0, lastIpNumber);
+    IPAddress gateway(192, 168, 0, 1); // Changed from 254 to 1
 #elif defined(VRANIC)
-    IPAddress ipa(192, 168, 1, lastIpNumber);
-    IPAddress gateway(192, 168, 1, 254);
+    IPAddress local_ip(192, 168, 1, lastIpNumber);
+    IPAddress gateway(192, 168, 1, 1); // Changed from 254 to 1
 #endif
     IPAddress subnet(255, 255, 255, 0);
-    WiFi.config(ipa, gateway, subnet);
+    IPAddress dns1(8, 8, 8, 8); // Primary public DNS
+    IPAddress dns2(1, 1, 1, 1); // Secondary public DNS
+
+    WiFi.config(local_ip, gateway, subnet, dns1, dns2);
   }
   else
-    WiFi.config(IPAddress(), IPAddress(), IPAddress());
+    WiFi.config(IPAddress(), IPAddress(), IPAddress(), IPAddress(), IPAddress());
   // WiFi.channel(1); // set channel to 1, so ESP-NOW and WiFi AP are on the same channel
 }
+
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h> // lib_deps = knolleary/PubSubClient @ ^2.8
+
+// Azure Configuration Details
+const char *mqtt_server = "HomeSensorHubs.azure-devices.net";
+const int mqtt_port = 8883;
+const char *client_id = "TestSensorHub"; // Must match Azure Device ID exactly
+
+// Username format MUST be exactly this:
+const char *mqtt_username = "HomeSensorHubs.azure-devices.net/TestSensorHub/?api-version=2021-04-12";
+
+// Paste your entire 1-year SAS token here:
+const char *mqtt_password = "SharedAccessSignature sr=HomeSensorHubs.azure-devices.net%2Fdevices%2FTestSensorHub&sig=e%2BfQTp0roWLnos5Hly2P4sqXj39oqsb%2FdKK6WWDaIGQ%3D&se=1816100353";
+
+// The Azure topic for Cloud-to-Device messages
+const char *c2d_topic = "devices/TestSensorHub/messages/devicebound/#";
+
+WiFiClientSecure azureSecureClient;
+PubSubClient azureMqttClient(azureSecureClient);
+
+// Remote Node Wake Queue Variables
+bool hasPendingCommand = false;
+uint8_t pendingCommandPayload = 0;
+
+// 1. Handle incoming commands sent from the Azure Cloud
+void azureCallback(char *topic, byte *payload, unsigned int length)
+{
+  String s = "azureCallback";
+
+  Serial.print("Cloud message arrived on topic: ");
+  Serial.println(topic);
+
+  if (length > 0)
+  {
+    // Capture the command byte (e.g. '1', '2', etc.)
+    pendingCommandPayload = payload[0];
+    hasPendingCommand = true;
+    Serial.printf("Command buffered for battery node: %c\n", pendingCommandPayload);
+    s += String(" - Command buffered for battery node: ") + (char)pendingCommandPayload;
+    logger.add("Azure", "HUB", s.c_str());
+  }
+}
+
+// 2. Manage connecting/reconnecting to Azure
+void connectToAzure()
+{
+  if (azureMqttClient.connected())
+    return;
+
+  Serial.print("Attempting Azure IoT Hub connection... ");
+
+  // Azure requires the ClientID, Username, and SAS Token Password
+  if (azureMqttClient.connect(client_id, mqtt_username, mqtt_password))
+  {
+    Serial.println("Connected to Azure!");
+    azureMqttClient.subscribe(c2d_topic);
+  }
+  else
+    Serial.printf("Failed connection, rc=%d. Try again in next loop.\n", azureMqttClient.state());
+}
+
+// // The Azure telemetry topic format
+// const char *d2c_topic = "devices/TestSensorHub/messages/events/";
+
+// void sendAzureAlert(String alertMessage)
+// {
+//   if (!azureMqttClient.connected())
+//     connectToAzure();
+
+//   // Create a simple JSON payload
+//   String payload = "{\"device\":\"TestSensorHub\",\"alert\":\"" + alertMessage + "\"}";
+
+//   // Publish to Azure
+//   if (azureMqttClient.publish(d2c_topic, payload.c_str()))
+//     Serial.println("Alert successfully published to Azure!");
+//   else
+//     logger.add("Azure", "HUB", "Failed to publish alert to Azure");
+// }
 
 void startWebServer()
 {
@@ -183,7 +285,7 @@ void setup()
   //? WiFi.persistent(false);
   WiFi.softAP("ESP_Hub", "SomeDumbPa$$22", 1, true); // hidden SSID
 #if defined(BANOVO_BRDO)
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  WiFi.begin(WIFI_SSID_VUJOVIC, WIFI_PASS_VUJOVIC);
 #elif defined(VRANIC)
   WiFi.begin(WIFI_SSID_MTS_UMKA, WIFI_PASS_MTS_UMKA);
   // WiFi.begin(WIFI_SSID_MTS_UMKA, WIFI_PASS_MTS_UMKA, 11); // this doesn't work
@@ -200,7 +302,9 @@ void setup()
   // Serial.print("Channel: ");
   // Serial.println(WiFi.channel());
 
-  sntp_set_sync_interval(7 * 24 * 60 * 60 * SECOND); // sync every week (daily auto reset will update time once a day)
+  // sntp_set_sync_interval(7 * 24 * 60 * 60 * SECOND); // sync every week (daily auto reset will update time once a day)
+  // sntp_set_sync_interval(3 * 60 * SECOND); // TEST!!
+  sntp_set_sync_interval(12 * 60 * 60 * SECOND); // sync every 12 hours
   sntp_set_time_sync_notification_cb(cbSyncTime);
   configTime(0, 0, MY_NTP_SERVER); // 0, 0 because we will use TZ in the next line
   setenv("TZ", MY_TZ, 1);          // Set environment variable with your time zone
@@ -228,6 +332,11 @@ void setup()
   setPeers();
   esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
   esp_now_register_send_cb(OnDataSent);
+
+  // Azure IoT Hub
+  azureSecureClient.setInsecure(); // Don't validate the TLS certificate chain (saves memory and avoids certificate expiration crashes)
+  azureMqttClient.setServer(mqtt_server, mqtt_port);
+  azureMqttClient.setCallback(azureCallback);
 }
 
 String message;
@@ -251,11 +360,11 @@ void loop()
     // Serial.println(peer->device);
     if (peer != NULL)
     {
-// #ifdef BANOVO_BRDO
+      // #ifdef BANOVO_BRDO
       if (peer->device == Device::ESP32BattConn)
-// #elif defined(VRANIC)
+      // #elif defined(VRANIC)
       // if (peer->device == Device::ESP32C3SuperMiniBlue)
-// #endif
+      // #endif
       {
         auto notif = GetNotif(WaterDetected);
         if (notif != NULL)
@@ -274,16 +383,43 @@ void loop()
           if (notif->buzz)
             buzzer.blinkCritical();
         }
-        logger.add(ToString::SensorTypes[peer->type], ToString::Devices[peer->device], seh.getMessageText());
       }
+#if defined(VRANIC)
+      // if (peer->device == Device::ESP32C3SuperMiniBlue)
+      // sendAzureAlert("Test: Motion detected in Vranic!"); // or seh.getMessageText()
+#endif
+      logger.add(ToString::SensorTypes[peer->type], ToString::Devices[peer->device], seh.getMessageText());
     }
     seh.clearEventData();
   }
 
   getLocalTime(&ti);
   tw.buzzIN();
-  if (ti.tm_hour == 22 && ti.tm_min == 22 && ti.tm_sec == 22)
-    ESP.restart();
+
+  // restart ESP32 at 22:22:22 every day to get current time from NTP server
+  // if (ti.tm_hour == 22 && ti.tm_min == 22 && ti.tm_sec == 22)
+  //   ESP.restart();
+
+  //* TEST if ESP can "Talk to the Internet (to sync NTP time, send data to Azure, etc.)"
+  // if (ti.tm_hour == 23 && ti.tm_min == 58 && ti.tm_sec == 10)
+  // {
+  //   auto res = NotifyWhatsApp::sendMessage("Hey+now+:)");
+  //   if (res != 200) // 200 = OK, log if not OK
+  //     Serial.println("WhatsApp Bot error res: " + String(res));
+  // }
+
+  if (!azureMqttClient.connected())
+  {
+    static unsigned long lastReconnectAttempt = 0;
+    unsigned long now = millis();
+    if (now - lastReconnectAttempt > 5000)
+    {
+      lastReconnectAttempt = now;
+      connectToAzure();
+    }
+  }
+  else
+    azureMqttClient.loop();
 
   delay(10);
 }

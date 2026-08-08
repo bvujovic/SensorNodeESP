@@ -1,9 +1,10 @@
 #include <Arduino.h>
 
-#include <DHT.h>      // lib_deps = adafruit/DHT sensor library@^1.4.6
-#define DHTPIN 3      // DHT sensor pin on ESP32
-#define DHTTYPE DHT22 // DHT 22 (AM2302)
-DHT dht(DHTPIN, DHTTYPE);
+const byte pinSendOften = 4; // GPIO4 (D4) - LOW = send every minute, HIGH = send every 10 minutes
+const byte pinDHT = 3;       // DHT sensor pin on ESP32
+#include <DHT.h>             // lib_deps = adafruit/DHT sensor library@^1.4.6
+#define DHTTYPE DHT22        // DHT 22 (AM2302)
+DHT dht(pinDHT, DHTTYPE);
 
 #include "AirData.h"
 AirData airData;
@@ -20,7 +21,7 @@ uint8_t *mac = macEsp32BattConnVranic;
 // uint8_t macFail[] = {0x78, 0x1C, 0x3C, 0xCA, 0xF3, 0x33}; // Non-existent MAC for testing
 
 #include "TimeSlotSend.h"
-TimeSlotSend tss(2, 5, 10, 1, 30);
+TimeSlotSend tss(2, 5, 15, 1, 30);
 
 void sendTimeRequest()
 {
@@ -46,6 +47,10 @@ void setup()
 {
   Serial.begin(115200);
   dht.begin();
+
+  pinMode(pinSendOften, INPUT_PULLUP);
+  tss.setSlotMin((digitalRead(pinSendOften) == HIGH ? 10 : 1));
+
   WiFi.mode(WIFI_STA);
   WiFi.setTxPower(WIFI_POWER_13dBm);
   while (esp_now_init() != ESP_OK)
