@@ -103,17 +103,18 @@ void wifiConfig(bool isStaticIP)
 
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h> // lib_deps = knolleary/PubSubClient @ ^2.8
+#include "azure-secrets.h"
 
 // Azure Configuration Details
-const char *mqtt_server = "HomeSensorHubs.azure-devices.net";
+const char *mqtt_server = SECRET_MQTT_SERVER;
 const int mqtt_port = 8883;
-const char *client_id = "TestSensorHub"; // Must match Azure Device ID exactly
+const char *client_id = SECRET_DEVICE_ID; // Must match Azure Device ID exactly
 
 // Username format MUST be exactly this:
-const char *mqtt_username = "HomeSensorHubs.azure-devices.net/TestSensorHub/?api-version=2021-04-12";
+const char *mqtt_username = SECRET_MQTT_USER;
 
 // Paste your entire 1-year SAS token here:
-const char *mqtt_password = "SharedAccessSignature sr=HomeSensorHubs.azure-devices.net%2Fdevices%2FTestSensorHub&sig=e%2BfQTp0roWLnos5Hly2P4sqXj39oqsb%2FdKK6WWDaIGQ%3D&se=1816100353";
+const char *mqtt_password = SECRET_SAS_TOKEN;
 
 // The Azure topic for Cloud-to-Device messages
 const char *c2d_topic = "devices/TestSensorHub/messages/devicebound/#";
@@ -302,7 +303,6 @@ void setup()
   // Serial.print("Channel: ");
   // Serial.println(WiFi.channel());
 
-  // sntp_set_sync_interval(7 * 24 * 60 * 60 * SECOND); // sync every week (daily auto reset will update time once a day)
   // sntp_set_sync_interval(3 * 60 * SECOND); // TEST!!
   sntp_set_sync_interval(12 * 60 * 60 * SECOND); // sync every 12 hours
   sntp_set_time_sync_notification_cb(cbSyncTime);
@@ -343,21 +343,11 @@ String message;
 
 void loop()
 {
-  // ESP-NOW: reply to "millis" command
-  // if (peerRespMillis != NULL)
-  // {
-  //     ulong ms = millis();
-  //     ultoa(ms, line, 10);
-  //     esp_now_send(peerRespMillis->peer_addr, (uint8_t *)&ms, 4);
-  //     peerRespMillis = NULL;
-  // }
   // ESP-NOW: handle Simple Event messages
   if (seh.isNewMessageReceived())
   {
-    Serial.println("main hub: seh.isNewMessageReceived()");
+    // Serial.println("main hub: seh.isNewMessageReceived()");
     auto peer = seh.getPeerInfo();
-    // Serial.println(peer != NULL);
-    // Serial.println(peer->device);
     if (peer != NULL)
     {
       // #ifdef BANOVO_BRDO
@@ -371,7 +361,7 @@ void loop()
         {
           if (notif->wa_msg)
           {
-            wifiConfig(false);
+            wifiConfig(false); //? test if this is necessary? probably not
             delay(3000);
             // 💥Stan, kuhinja, sudopera:
             // VISOK NIVO VODE U SUDOPERI 💦
@@ -385,8 +375,14 @@ void loop()
         }
       }
 #if defined(VRANIC)
-      // if (peer->device == Device::ESP32C3SuperMiniBlue)
-      // sendAzureAlert("Test: Motion detected in Vranic!"); // or seh.getMessageText()
+      if (peer->device == Device::ESP32C3Xiao)
+      {
+        // auto res = NotifyWhatsApp::sendMessage(seh.getMessageText());
+        // if (res != 200) // 200 = OK, log if not OK
+        //   logger.add("NotifyWhatsApp", "ESP32Hub", (String("WhatsApp message sent, resp code: ") + res).c_str());
+        
+        buzzer.blinkCritical();
+      }
 #endif
       logger.add(ToString::SensorTypes[peer->type], ToString::Devices[peer->device], seh.getMessageText());
     }
@@ -410,9 +406,9 @@ void loop()
 
   if (!azureMqttClient.connected())
   {
-    static unsigned long lastReconnectAttempt = 0;
-    unsigned long now = millis();
-    if (now - lastReconnectAttempt > 5000)
+    static ulong lastReconnectAttempt = 0;
+    ulong now = millis();
+    if (now - lastReconnectAttempt > 10000) //* make this interval longer...
     {
       lastReconnectAttempt = now;
       connectToAzure();

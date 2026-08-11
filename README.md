@@ -26,11 +26,20 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
 ![ESP32, Li-Ion 18650 battery, water detection wires](projects/_clients/esp32-wake-on-pin/docs/esp32-wake-on-pin_device.jpg)
 
 ## TODO
+- [ ] Adjust WinBackupApp so it can run @Vranic
+- [ ] Pay subscription to the CallMeBot: https://www.callmebot.com/support_callmebot/?phone=351919370635
 - [ ] Hub:
-    - [ ] (TEST) Does millis command returns ulong millis() on hub/server? Use retrying_retryer.cpp
     - [ ] Make 2nd version of Hub project - Hub /wo internet for places without internet access or with unknown net credentials. Communication with clients is done via ESP-NOW or radio (HC-12, LoRa, http...). Maybe it could have its own wireless network for web app access?
     - [ ] Web App:
         - [ ] Improve interface (chart.js disappears, shrinks)
+    - [ ] Messages to the hub: ESP32CAM - take a picture, indoor vehicle - start, move...
+      - [x] Send message from Azure to the hub
+      - [x] Send message from web app or ESP device to the hub
+      - [ ] (WIP) Make ESP32-C3 client that sleeps and gets a message from the hub
+      - [ ] Why doesn't ESP32-C3 XIAO work with PIR sensor 
+      - [ ] Test current hub code @BanovoBrdo
+      - [ ] Put Azure code in a class (e.g. AzureMessages)
+      - [ ] ESP32-C3 turn up ESP32CAM and forward message from the hub
 - [ ] Clients:
     - [ ] ClientLogger
         - [ ] Use it in SCD30 and ENS&DHT projects
@@ -41,7 +50,6 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
     - [ ] (WIP) SCD30:
         - [ ] Button click: print log on Serial and send data (prev data or wait for new?) to the hub
     - [ ] esp32-wake-on-pin
-        - [ ] Test this code with SuperMini modules (C3, C6, S3)
     - [ ] Add more sensor nodes
         - [ ] Microphone (noise levels)
 
@@ -59,15 +67,3 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
     - lastChartParam: add default property for new sensor
 
 ## Links
-
-### ESP-NOW
-- https://randomnerdtutorials.com/esp-now-two-way-communication-esp32/
-- https://randomnerdtutorials.com/esp-now-two-way-communication-esp8266-nodemcu/
-- https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
-- https://randomnerdtutorials.com/esp32-esp-now-wi-fi-web-server/
-- https://rntlab.com/question/esp-now-gateway-wifi_mode_sta-with-a-wifi-router/
-- https://forum.arduino.cc/t/use-esp-now-and-wifi-simultaneously-on-esp32/1034555/16
-
-## Remarks
- - ESP-NOW communication works if WiFi channel on the router is set to 1. There might be ways to fix that by using wifi_promiscuous_enable()...
-

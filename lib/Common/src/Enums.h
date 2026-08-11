@@ -29,6 +29,8 @@ enum SensorType
   SensorTypeCount
 };
 
+/// @brief Depending on device type hub will handle data differently: log data, send WA notification, buzz...
+/// @see ToString::Devices to add or modify device names (as strings)
 enum Device
 {
   UndefinedDevice,
@@ -40,6 +42,7 @@ enum Device
   ESP32BattConn,
   ESP32C3SuperMiniBlue,
   ESP32C3ant1,
+  ESP32C3Xiao,
 };
 
 /// @brief Depending on event type hub will handle data differently: log data, send WA notification, buzz...

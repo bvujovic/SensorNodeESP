@@ -40,7 +40,8 @@ void setPeers()
   setPeer(peers + (cntPeers++), macEsp32BattConnUsbC1, SensorType::SimpleEvent, Device::ESP32BattConn);      // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
   setPeer(peers + (cntPeers++), macEsp8266Wemos2, SensorType::SCD30, Device::Wemos1);
 #elif defined(VRANIC)
-  setPeer(peers + (cntPeers++), macEsp32C3SuperMiniBlue, SensorType::SimpleEvent, Device::ESP32C3SuperMiniBlue);
+  // setPeer(peers + (cntPeers++), macEsp32C3SuperMiniBlue, SensorType::SimpleEvent, Device::ESP32C3SuperMiniBlue);
+  setPeer(peers + (cntPeers++), macEsp32C3Xiao, SensorType::SimpleEvent, Device::ESP32C3Xiao);
   setPeer(peers + (cntPeers++), macEsp32C3ant1, SensorType::TempHumSensor, Device::ESP32C3ant1);
 #endif
   addPeers();
@@ -49,9 +50,6 @@ void setPeers()
 void addPeers()
 {
   Serial.println("Adding ESP-NOW peers: ");
-  // Serial.println(cntPeers);
-  // Serial.println(LWIP_ARRAYSIZE(peers));
-  // for (auto &&p : peers)
   for (size_t i = 0; i < cntPeers; i++)
   {
     // printMAC(p.peer_addr);
@@ -84,9 +82,6 @@ bool equalMACs(const uint8_t *mac1, const uint8_t *mac2)
 
 peer_info *findPeer(const uint8_t *mac)
 {
-  // for (auto &&p : peers)
-  //   if (equalMACs(p.peer_addr, mac))
-  //     return &p;
   for (size_t i = 0; i < cntPeers; i++)
     if (equalMACs(peers[i].peer_addr, mac))
       return &peers[i];
@@ -107,7 +102,6 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 // discard batch messages (less than 1sec from the last one) from the same MAC address
 bool burstDetected(const uint8_t *mac)
 {
-  // Serial.println("burstDetected start");
   static uint8_t lastMAC[MAC_LEN];
   static unsigned long lastTime = 0;
   unsigned long now = millis();
@@ -127,7 +121,6 @@ bool burstDetected(const uint8_t *mac)
   }
   memcpy(lastMAC, mac, MAC_LEN);
   lastTime = now;
-  // Serial.println("burstDetected end");
   return discardMsg;
 }
 
@@ -146,9 +139,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
   }
   if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
   {
-    // peerRespMillis = findPeer(mac);
-    // return millis() as ulong (4 bytes) instead of string, to avoid issues with millis() overflow after ~49 days
-
     auto ms = millis();
     esp_now_send(mac, (uint8_t *)&ms, sizeof(ms));
     return;
@@ -158,9 +148,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
   if (p != NULL)
   {
     Serial.printf("Data received from %s @ %s, len: %d\n", ToString::SensorTypes[p->type], ToString::Devices[p->device], len);
-
-    // if (len == lenCmdMillis && strncmp((const char *)incomingData, CMD_MILLIS, lenCmdMillis) == 0)
-    //     peerRespMillis = p;
 
     // handling data from nodes (sensors)
     if (p->type == SensorType::EnsDht)
@@ -200,7 +187,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
       memcpy(line, incomingData, len);
       line[len] = '\0';
       seh.newMessage(line, p);
-      // Serial.println("back from seh.newMessage()");
     }
   }
   else

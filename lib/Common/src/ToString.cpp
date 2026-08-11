@@ -7,7 +7,7 @@ const char *ToString::SensorTypes[] = {
     "TempHum",
     "EnsDht",
     "BME680",
-    "SCD30",
+    "SCD30",    
 };
 
 const char *ToString::SensorTypesComment[] = {
@@ -30,4 +30,5 @@ const char *ToString::Devices[] = {
     "Kitchen.Sink",         // "ESP32 BattConn",
     "Vranic.SuperMiniBlue", // "ESP32C3 Super Mini (blue, larger ceramic antenna)",
     "Vranic.ESP32C3ant1",   // "ESP32C3 Super Mini (black w/ DIY antenna)",
+    "Vranic.ESP32C3Xiao",   // "ESP32-C3 XIAO",
 };

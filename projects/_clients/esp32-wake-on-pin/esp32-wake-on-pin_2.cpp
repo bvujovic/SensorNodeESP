@@ -9,17 +9,17 @@ CONFIG_IDF_TARGET_ESP32C3
 #include <Arduino.h>
 #include "esp_sleep.h"
 
-#define MSG_TEXT "Water detected!"
+#define MSG_TEXT "Movement detected!"
 #define MAX_SEND_ATTEMPTS 3
 #define SEC_REPEAT_SEND_DELAY 4 // Interval in seconds between send attempts
-#define MIN_COOL_DOWN 20        // Device will not respond to pin events for this many minutes
+#define MIN_COOL_DOWN 1         // Device will not respond to pin events for this many minutes
 #define ACTIVE_LEVEL HIGH       // Level that indicate a wake: LOW/HIGH
-
 #if defined(CONFIG_IDF_TARGET_ESP32)
 const gpio_num_t pinWake = GPIO_NUM_14;
 const byte pinLed = 22; // On-board LED
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
-const gpio_num_t pinWake = GPIO_NUM_4;
+// const gpio_num_t pinWake = GPIO_NUM_4;
+const gpio_num_t pinWake = GPIO_NUM_3;
 const byte pinLed = 8; // On-board LED
 // #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 // const gpio_num_t pinWake = GPIO_NUM_14; // example
@@ -146,14 +146,13 @@ void sendEspNowMessage()
 
 void setup()
 {
+  delay(3000); //* for testing, allow time to open Serial Monitor
   Serial.begin(115200);
   delay(10); // allow Serial to start
-  // Serial.println("start1");
+  Serial.println("start1");
   pinMode(pinLed, OUTPUT);
-  // ledOn(true);
-  // delay(5000);
   ledOn(false);
-  // Serial.println("start2");
+  Serial.println("start2");
 
   auto wakeReason = esp_sleep_get_wakeup_cause();
   Serial.printf("Wakeup reason: %d\n", (int)wakeReason);
@@ -182,7 +181,7 @@ void setup()
   }
   else
   {
-    if (cntSendAttempt > 0)
+    if (cntSendAttempt > 0) // Woke up to retry sending a message
       sendEspNowMessage();
     else
     {
