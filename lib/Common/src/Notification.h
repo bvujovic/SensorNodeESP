@@ -4,25 +4,30 @@
 
 struct Notification
 {
-    int id;
-    String name;
-    bool buzz;
-    bool wa_msg;
+  int id;
+  String name;
+  bool buzz;
+  bool wa_msg;
 };
 
 Notification notifications[] = {
+#if defined(BANOVO_BRDO)
     {WaterDetected, "Water detected", 1, 1},
     {CO2_800, "CO2 >= 800", 0, 0},
     {AQI4, "Air quality: AQI >= 4", 0, 0},
     {ECO2_1000, "Air quality: ECO2 >= 1000", 0, 0},
     {AQI5, "Air quality: AQI >= 5", 0, 0},
+#elif defined(VRANIC)
+    // {MovementDetected, "Movement detected", 1, 1},
+    {CO2_800, "CO2 >= 1000", 0, 0},
+#endif
 };
 
 /// @brief Gets the notification, given its id (EnumNotification).
 Notification *GetNotif(EnumNotification e)
 {
-    for (auto &&n : notifications)
-        if (n.id == e)
-            return &n;
-    return NULL;
+  for (auto &&n : notifications)
+    if (n.id == e)
+      return &n;
+  return NULL;
 }

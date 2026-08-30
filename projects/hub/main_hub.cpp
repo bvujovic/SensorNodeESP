@@ -283,6 +283,7 @@ void setup()
 
   // WiFi
   WiFi.mode(WIFI_AP_STA); // ESP32 has to be in this mode to be able to use ESP-NOW and Web Server at the same time
+  WiFi.setTxPower(WIFI_POWER_13dBm);
   //? WiFi.persistent(false);
   WiFi.softAP("ESP_Hub", "SomeDumbPa$$22", 1, true); // hidden SSID
 #if defined(BANOVO_BRDO)
@@ -380,7 +381,7 @@ void loop()
         // auto res = NotifyWhatsApp::sendMessage(seh.getMessageText());
         // if (res != 200) // 200 = OK, log if not OK
         //   logger.add("NotifyWhatsApp", "ESP32Hub", (String("WhatsApp message sent, resp code: ") + res).c_str());
-        
+
         buzzer.blinkCritical();
       }
 #endif

@@ -19,8 +19,9 @@ const gpio_num_t pinWake = GPIO_NUM_14;
 const byte pinLed = 22; // On-board LED
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
 // const gpio_num_t pinWake = GPIO_NUM_4;
-const gpio_num_t pinWake = GPIO_NUM_3;
-const byte pinLed = 8; // On-board LED
+const gpio_num_t pinWake = GPIO_NUM_3; // D1 on XIAO ESP32-C3
+// const byte pinLed = 8; // On-board LED
+const byte pinLed = D0; // On-board LED
 // #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 // const gpio_num_t pinWake = GPIO_NUM_14; // example
 #else
@@ -146,13 +147,13 @@ void sendEspNowMessage()
 
 void setup()
 {
+  pinMode(pinLed, OUTPUT);
+  ledOn(false); //* for testing
   delay(3000); //* for testing, allow time to open Serial Monitor
   Serial.begin(115200);
   delay(10); // allow Serial to start
   Serial.println("start1");
-  pinMode(pinLed, OUTPUT);
-  ledOn(false);
-  Serial.println("start2");
+  ledOn(true);
 
   auto wakeReason = esp_sleep_get_wakeup_cause();
   Serial.printf("Wakeup reason: %d\n", (int)wakeReason);
