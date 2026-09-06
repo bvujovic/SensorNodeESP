@@ -57,6 +57,7 @@ enum EventType
 enum EnumNotification
 {
   WaterDetected,
+  MovementDetected,
   CO2_800,
   AQI4,
   ECO2_1000,

@@ -14,7 +14,7 @@ Logger logger;
 #if defined(BANOVO_BRDO)
 #include <CredWiFi_Vujovic.h>
 #elif defined(VRANIC)
-#include <CredWiFi_mtsUmka.h>
+#include <CredWiFi_Vranic.h>
 #endif
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h> // lib_deps = esphome/ESPAsyncWebServer-esphome @ ^3.3.0
@@ -87,8 +87,10 @@ void wifiConfig(bool isStaticIP)
     IPAddress local_ip(192, 168, 0, lastIpNumber);
     IPAddress gateway(192, 168, 0, 1); // Changed from 254 to 1
 #elif defined(VRANIC)
-    IPAddress local_ip(192, 168, 1, lastIpNumber);
-    IPAddress gateway(192, 168, 1, 1); // Changed from 254 to 1
+    // IPAddress local_ip(192, 168, 1, lastIpNumber);
+    // IPAddress gateway(192, 168, 1, 1); // Changed from 254 to 1
+    IPAddress local_ip(192, 168, 8, lastIpNumber);
+    IPAddress gateway(192, 168, 8, 1); // Changed from 254 to 1
 #endif
     IPAddress subnet(255, 255, 255, 0);
     IPAddress dns1(8, 8, 8, 8); // Primary public DNS
@@ -289,7 +291,8 @@ void setup()
 #if defined(BANOVO_BRDO)
   WiFi.begin(WIFI_SSID_VUJOVIC, WIFI_PASS_VUJOVIC);
 #elif defined(VRANIC)
-  WiFi.begin(WIFI_SSID_MTS_UMKA, WIFI_PASS_MTS_UMKA);
+  WiFi.begin(WIFI_SSID_VRANIC, WIFI_PASS_VRANIC);
+  // WiFi.begin(WIFI_SSID_MTS_UMKA, WIFI_PASS_MTS_UMKA);
   // WiFi.begin(WIFI_SSID_MTS_UMKA, WIFI_PASS_MTS_UMKA, 11); // this doesn't work
 #endif
   Serial.print("Connecting to WiFi");
@@ -367,8 +370,8 @@ void loop()
             // 💥Stan, kuhinja, sudopera:
             // VISOK NIVO VODE U SUDOPERI 💦
             auto res = NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
-            if (res != 200) // 200 = OK, log if not OK
-              logger.add("NotifyWhatsApp", "ESP32Hub", (String("WhatsApp message sent, resp code: ") + res).c_str());
+            if (res != CMB_OK)
+              logger.add(CMB_LOG_TYPE, "ESP32Hub", NotifyWhatsApp::errorMessage(res));
             wifiConfig(true);
           }
           if (notif->buzz)
@@ -378,11 +381,18 @@ void loop()
 #if defined(VRANIC)
       if (peer->device == Device::ESP32C3Xiao)
       {
-        // auto res = NotifyWhatsApp::sendMessage(seh.getMessageText());
-        // if (res != 200) // 200 = OK, log if not OK
-        //   logger.add("NotifyWhatsApp", "ESP32Hub", (String("WhatsApp message sent, resp code: ") + res).c_str());
-
-        buzzer.blinkCritical();
+        auto notif = GetNotif(MovementDetected);
+        if (notif != NULL)
+        {
+          if (notif->wa_msg)
+          {
+            auto res = NotifyWhatsApp::sendMessage(seh.getMessageText());
+            if (res != CMB_OK)
+              logger.add(CMB_LOG_TYPE, "ESP32Hub", NotifyWhatsApp::errorMessage(res));
+          }
+          if (notif->buzz)
+            buzzer.blinkCritical();
+        }
       }
 #endif
       logger.add(ToString::SensorTypes[peer->type], ToString::Devices[peer->device], seh.getMessageText());

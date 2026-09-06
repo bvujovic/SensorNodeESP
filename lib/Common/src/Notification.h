@@ -18,7 +18,7 @@ Notification notifications[] = {
     {ECO2_1000, "Air quality: ECO2 >= 1000", 0, 0},
     {AQI5, "Air quality: AQI >= 5", 0, 0},
 #elif defined(VRANIC)
-    // {MovementDetected, "Movement detected", 1, 1},
+    {MovementDetected, "Movement detected", 1, 1},
     {CO2_800, "CO2 >= 1000", 0, 0},
 #endif
 };

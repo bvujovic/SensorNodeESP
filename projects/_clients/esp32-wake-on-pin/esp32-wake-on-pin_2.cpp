@@ -13,15 +13,16 @@ CONFIG_IDF_TARGET_ESP32C3
 #define MAX_SEND_ATTEMPTS 3
 #define SEC_REPEAT_SEND_DELAY 4 // Interval in seconds between send attempts
 #define MIN_COOL_DOWN 1         // Device will not respond to pin events for this many minutes
-#define ACTIVE_LEVEL HIGH       // Level that indicate a wake: LOW/HIGH
+#define ACTIVE_LEVEL LOW        // Level that indicate a wake: LOW/HIGH
+#define PIR_W_TRANSISTOR true   // Transistor that inverts PIRs signal (ChatGPTs idea)
 #if defined(CONFIG_IDF_TARGET_ESP32)
 const gpio_num_t pinWake = GPIO_NUM_14;
 const byte pinLed = 22; // On-board LED
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
 // const gpio_num_t pinWake = GPIO_NUM_4;
 const gpio_num_t pinWake = GPIO_NUM_3; // D1 on XIAO ESP32-C3
-// const byte pinLed = 8; // On-board LED
-const byte pinLed = D0; // On-board LED
+const byte pinLed = 8;                 // On-board LED
+// const byte pinLed = D0; // On-board LED
 // #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 // const gpio_num_t pinWake = GPIO_NUM_14; // example
 #else
@@ -75,9 +76,7 @@ bool validateWakePin()
 void goToSleepWakeOnPin()
 {
 #if CONFIG_IDF_TARGET_ESP32C3
-  // Enable GPIO wakeup
   gpio_wakeup_enable(pinWake, ACTIVE_LEVEL == LOW ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
-  // Enable wakeup source
   esp_deep_sleep_enable_gpio_wakeup(1 << pinWake, ACTIVE_LEVEL == LOW ? ESP_GPIO_WAKEUP_GPIO_LOW : ESP_GPIO_WAKEUP_GPIO_HIGH);
 #else
   esp_sleep_enable_ext0_wakeup(pinWake, ACTIVE_LEVEL); // Use EXT0 to wake from a single RTC pin. level param: 0 => wake on LOW, 1 => wake on HIGH
@@ -148,17 +147,19 @@ void sendEspNowMessage()
 void setup()
 {
   pinMode(pinLed, OUTPUT);
-  ledOn(false); //* for testing
-  delay(3000); //* for testing, allow time to open Serial Monitor
+  // ledOn(false); //* for testing
+  // delay(2000); //* for testing, allow time to open Serial Monitor
   Serial.begin(115200);
   delay(10); // allow Serial to start
   Serial.println("start1");
-  ledOn(true);
+  // ledOn(true);
 
   auto wakeReason = esp_sleep_get_wakeup_cause();
   Serial.printf("Wakeup reason: %d\n", (int)wakeReason);
   // Prepare the wake pin as input and internal pull (so it's not floating)
-  pinMode((int)pinWake, ACTIVE_LEVEL == LOW ? INPUT_PULLUP : INPUT_PULLDOWN);
+  pinMode((int)pinWake, ACTIVE_LEVEL == LOW
+                            ? (PIR_W_TRANSISTOR ? INPUT : INPUT_PULLUP)
+                            : INPUT_PULLDOWN);
 #if CONFIG_IDF_TARGET_ESP32C3
   if (wakeReason == ESP_SLEEP_WAKEUP_GPIO)
 #else
