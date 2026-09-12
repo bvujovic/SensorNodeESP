@@ -26,8 +26,9 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
 ![ESP32, Li-Ion 18650 battery, water detection wires](projects/_clients/esp32-wake-on-pin/docs/esp32-wake-on-pin_device.jpg)
 
 ## TODO
-- [ ] (WIP) Adjust WinBackupApp so it can run @Vranic
-- [x] Pay subscription to the CallMeBot
+- [ ] (TN) Adjust WinBackupApp so it can run @Vranic and @BanovoBrdo
+- [ ] (OPT) Add string comment/info data field to the AirData structure. Test parsing air data w/ and w/o that additional field.
+- [x] Bugfix: sendMessage(seh.getMessageText()) error
 - [ ] Hub:
   - [ ] (OPT) PIR on Hub: add PIR sensor directly to the Hub so that another esp32-wake-on-pin client isn't necessary for movement detection. Hub will also log and send a message to the user (WhatsApp).
   - [ ] Make 2nd version of Hub project - Hub /wo internet for places without internet access or with unknown net credentials. Communication with clients is done via ESP-NOW or radio (HC-12, LoRa, http...). Maybe it could have its own wireless network for web app access?
@@ -35,7 +36,6 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
       - [ ] Improve interface (chart.js disappears, shrinks)
   - [ ] Messages to the hub: ESP32CAM - take a picture, indoor vehicle - start, move...
     - [ ] (WIP) Make ESP32-C3 client that sleeps and gets a message from the hub
-    - [x] Why doesn't ESP32-C3 XIAO work with PIR sensor 
     - [ ] Test current hub code @BanovoBrdo
     - [ ] Put Azure code in a class (e.g. AzureMessages/AzureThings)
     - [ ] ESP32-C3 turn up ESP32CAM and forward message from the hub
@@ -48,9 +48,12 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
   - [ ] (OPT) Put TSS, LoggerMin and retrying logic in a class that will be used by most clients that report data regularly to the hub
   - [ ] SCD30:
       - [ ] Button click: print log on Serial and send data (prev data or wait for new?) to the hub
-  - [x] esp32-wake-on-pin: new version that supports PIR w/ transistor
   - [ ] Add more sensor nodes
     - [ ] (WIP) SCD41 (CO2 sensor)
+      - [ ] It gets data from sensor every other time (single shot measure, every 5min). Why? Check how much time does the sensor need for measuring. Maybe include logger.
+      - [ ] Send data at the right time ()
+      - [ ] Check reliability of data
+      - [ ] Measure current consumption
     - [ ] Microphone (noise levels)
 
 ## Add new client routine

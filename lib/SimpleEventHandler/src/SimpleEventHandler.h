@@ -23,7 +23,7 @@ public:
     // void newMessage(const unsigned char *mac, char *msg, peer_info *p);
     void newMessage(char *msg, peer_info *p);
     // const char *getDeviceName() const { return deviceName; }
-    const char *getMessageText() const { return msgText; }
+    char *getMessageText() const { return msgText; }
     peer_info *getPeerInfo() const { return peer; }
     void clearEventData();                                           // resets event data
     bool isNewMessageReceived() const { return msgText != NULL; } // checks if a new message was received

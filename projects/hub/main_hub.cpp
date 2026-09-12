@@ -334,7 +334,8 @@ void setup()
       delay(100);
   }
   setPeers();
-  esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+  // esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+  esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb(OnDataSent);
 
   // Azure IoT Hub
@@ -387,6 +388,8 @@ void loop()
           if (notif->wa_msg)
           {
             auto res = NotifyWhatsApp::sendMessage(seh.getMessageText());
+            // auto res = NotifyWhatsApp::sendMessage("Movement+detected+in+the+room!+%F0%9F%94%B4");// Not tested
+            // auto res = NotifyWhatsApp::sendMessage("Movement+detected+in+the+room"); // Tested OK
             if (res != CMB_OK)
               logger.add(CMB_LOG_TYPE, "ESP32Hub", NotifyWhatsApp::errorMessage(res));
           }

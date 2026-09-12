@@ -12,8 +12,12 @@
 class NotifyWhatsApp
 {
 private:
+  static void spaceToPlus(char *str);
+  static int _sendMessage(char *msg);
+
 public:
   static int sendMessage(const char *msg);
+  static int sendMessage(char *msg);
   // static String &errorMessage(int errorCode);
   static const char *errorMessage(int errorCode);
 };

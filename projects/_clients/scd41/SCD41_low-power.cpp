@@ -57,10 +57,13 @@ void setup()
 {
   pinMode(pinLed, OUTPUT);
   Serial.begin(115200);
-  while (!Serial)
-    delay(100);
+  // while (!Serial)
+  //   delay(100);
+  delay(2000);
+  Serial.println("SCD41 Low Power Single Shot Example");
 
-  Wire.begin();          // Adjust SDA/SCL pins here if needed (e.g., Wire.begin(21, 22))
+  // Wire.begin();          // Adjust SDA/SCL pins here if needed (e.g., Wire.begin(21, 22))
+  Wire.begin(8, 9);
   scd.begin(Wire, 0x62); // Use the default I2C address for SCD41 (0x62)
 
   //* Power Cycled Single Shot Operation: use wakeUp() and powerDown() to save power between readings

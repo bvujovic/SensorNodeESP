@@ -2,65 +2,65 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>Sensor Node</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
-    <link rel="icon" href="img/nodes.png" type="image/png" />
-    <style>
-        * {
-            font-family: 'Segoe UI', Verdana, sans-serif;
-            background-color: #121212;
-            color: #fff;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Sensor Node</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
+  <link rel="icon" href="img/nodes.png" type="image/png" />
+  <style>
+    * {
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      background-color: #121212;
+      color: #fff;
+    }
 
-        h2 {
-            margin-bottom: 10px;
-        }
+    h2 {
+      margin-bottom: 10px;
+    }
 
-        .segment {
-            margin-left: 20px;
-        }
+    .segment {
+      margin-left: 20px;
+    }
 
-        .btn {
-            padding: 3px 15px;
-            width: 111px;
-        }
+    .btn {
+      padding: 3px 15px;
+      width: 111px;
+    }
 
-        th {
-            text-align: left;
-        }
+    th {
+      text-align: left;
+    }
 
-        .firstCol {
-            width: 80px;
-        }
+    .firstCol {
+      width: 80px;
+    }
 
-        /* .combo { */
-        select {
-            width: 100px;
-        }
+    /* .combo { */
+    select {
+      width: 100px;
+    }
 
-        #divChart {
-            margin-top: 10px;
-        }
+    #divChart {
+      margin-top: 10px;
+    }
 
-        #tblChart {
-            visibility: collapse;
-            /* width: 50%; */
-            margin-right: 20px;
-            /* max-width: none; */
-            overflow: hidden;
-            /* Prevents content from expanding beyond */
-            max-width: 100%;
-            /* Ensures the table doesn’t get too wide */
-        }
+    #tblChart {
+      visibility: collapse;
+      /* width: 50%; */
+      margin-right: 20px;
+      /* max-width: none; */
+      overflow: hidden;
+      /* Prevents content from expanding beyond */
+      max-width: 100%;
+      /* Ensures the table doesn’t get too wide */
+    }
 
-        /*
+    /*
         #myCanvas {
             max-height: 300px;
             display: block;
@@ -72,458 +72,458 @@
         }
         */
 
-        .linkIcon {
-            width: 16px;
-            margin-right: 12px;
+    .linkIcon {
+      width: 16px;
+      margin-right: 12px;
+    }
+
+    canvas#myCanvas {
+      max-height: 300px;
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      transform: translate3d(0, 0, 0);
+      /* Force GPU acceleration */
+      will-change: transform;
+      /* Hint Chrome to keep layer */
+    }
+  </style>
+  <script>
+    let chart;
+    let canvas;
+
+    function CmbFileNameChange() {
+      txtContent.value = '';
+      const fileName = cmbFileName.value;
+      if (fileName == NOTHING) {
+        Loading(false);
+        return;
+      }
+      Loading(true);
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          Loading(false);
+          txtContent.value = this.responseText;
         }
+      };
+      var url = '/loadTextFile?name=' + cmbFileName.value;
+      xhttp.open('GET', url, true); xhttp.send();
+    }
 
-        canvas#myCanvas {
-            max-height: 300px;
-            display: block;
-            width: 100%;
-            max-width: 100%;
-            transform: translate3d(0, 0, 0);
-            /* Force GPU acceleration */
-            will-change: transform;
-            /* Hint Chrome to keep layer */
+    function SaveFile() {
+      Saving(true);
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200)
+          Saving(false);
+      };
+      xhttp.open("POST", "/saveTextFile", true);
+      xhttp.setRequestHeader("Content-type", "text/plain");
+      xhttp.send(txtContent.value);
+    }
+
+    function TimeWatcherLoad() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          var min = Number(this.responseText);
+          chkIsItOn.checked = min != 0;
+          if (min > 0)
+            selBuzzMin.value = min;
         }
-    </style>
-    <script>
-        let chart;
-        let canvas;
+      };
+      var url = '/buzzOnMinGet';
+      xhttp.open('GET', url, true); xhttp.send();
+    }
 
-        function CmbFileNameChange() {
-            txtContent.value = '';
-            const fileName = cmbFileName.value;
-            if (fileName == NOTHING) {
-                Loading(false);
-                return;
-            }
-            Loading(true);
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    Loading(false);
-                    txtContent.value = this.responseText;
-                }
-            };
-            var url = '/loadTextFile?name=' + cmbFileName.value;
-            xhttp.open('GET', url, true); xhttp.send();
+    function TimeWatcherChange(sender) {
+      if (sender.id == 'selBuzzMin')
+        chkIsItOn.checked = true;
+      var buzzMin = chkIsItOn.checked ? selBuzzMin.value : 0;
+      var xhttp = new XMLHttpRequest();
+      var url = '/buzzOnMinSave?min=' + buzzMin;
+      xhttp.open('GET', url, true); xhttp.send();
+    }
+
+    function LoadFolders() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          const splitLines = this.responseText.trim().split(/\r?\n/);
+          for (const line of splitLines) {
+            if (line.trim().length == 0)
+              continue;
+            cmbFolders.appendChild(CreateOption(line, line));
+          }
+          cmbFolders.options[cmbFolders.options.length - 1].selected = 'selected';
+          if (cmbFolders.options.length > 1)
+            CmbFoldersChange();
         }
+      };
+      var url = '/log?list=dirs';
+      xhttp.open('GET', url, true); xhttp.send();
+    }
 
-        function SaveFile() {
-            Saving(true);
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200)
-                    Saving(false);
-            };
-            xhttp.open("POST", "/saveTextFile", true);
-            xhttp.setRequestHeader("Content-type", "text/plain");
-            xhttp.send(txtContent.value);
+    function CmbFoldersChange() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          cmbFiles.innerHTML = '';
+          cmbFiles.appendChild(CreateOption(NOTHING, NOTHING));
+          for (const line of this.responseText.split(/\r?\n/)) {
+            if (line.trim().length == 0)
+              continue;
+            cmbFiles.appendChild(CreateOption(line, line));
+          }
+          cmbFiles.options[cmbFiles.options.length - 1].selected = 'selected';
+          if (cmbFiles.options.length > 1)
+            CmbFilesChange();
         }
+      };
+      var url = '/log?list=files&dir=/' + cmbFolders.value;
+      xhttp.open('GET', url, true); xhttp.send();
+    }
 
-        function TimeWatcherLoad() {
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    var min = Number(this.responseText);
-                    chkIsItOn.checked = min != 0;
-                    if (min > 0)
-                        selBuzzMin.value = min;
-                }
-            };
-            var url = '/buzzOnMinGet';
-            xhttp.open('GET', url, true); xhttp.send();
+    // Take log entries from last n (e.g. 8) hours.
+    function TakeLastEntries(content) {
+      const n = 8;
+      const lines = content.trim().split(/\r?\n/);
+      const lastLine = lines[lines.length - 1].trim();
+      const hourStr = lastLine.substring(0, 2);
+      let hour = parseInt(hourStr, 10);
+      if (hour - n < 0)
+        fileContent = content;
+      else {
+        const validHours = [];
+        for (let i = 0; i < n; i++) {
+          let h = hour - i;
+          validHours.push(h.toString().padStart(2, '0'));
         }
-
-        function TimeWatcherChange(sender) {
-            if (sender.id == 'selBuzzMin')
-                chkIsItOn.checked = true;
-            var buzzMin = chkIsItOn.checked ? selBuzzMin.value : 0;
-            var xhttp = new XMLHttpRequest();
-            var url = '/buzzOnMinSave?min=' + buzzMin;
-            xhttp.open('GET', url, true); xhttp.send();
-        }
-
-        function LoadFolders() {
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    const splitLines = this.responseText.trim().split(/\r?\n/);
-                    for (const line of splitLines) {
-                        if (line.trim().length == 0)
-                            continue;
-                        cmbFolders.appendChild(CreateOption(line, line));
-                    }
-                    cmbFolders.options[cmbFolders.options.length - 1].selected = 'selected';
-                    if (cmbFolders.options.length > 1)
-                        CmbFoldersChange();
-                }
-            };
-            var url = '/log?list=dirs';
-            xhttp.open('GET', url, true); xhttp.send();
-        }
-
-        function CmbFoldersChange() {
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    cmbFiles.innerHTML = '';
-                    cmbFiles.appendChild(CreateOption(NOTHING, NOTHING));
-                    for (const line of this.responseText.split(/\r?\n/)) {
-                        if (line.trim().length == 0)
-                            continue;
-                        cmbFiles.appendChild(CreateOption(line, line));
-                    }
-                    cmbFiles.options[cmbFiles.options.length - 1].selected = 'selected';
-                    if (cmbFiles.options.length > 1)
-                        CmbFilesChange();
-                }
-            };
-            var url = '/log?list=files&dir=/' + cmbFolders.value;
-            xhttp.open('GET', url, true); xhttp.send();
-        }
-
-        // Take log entries from last n (e.g. 8) hours.
-        function TakeLastEntries(content) {
-            const n = 8;
-            const lines = content.trim().split(/\r?\n/);
-            const lastLine = lines[lines.length - 1].trim();
-            const hourStr = lastLine.substring(0, 2);
-            let hour = parseInt(hourStr, 10);
-            if (hour - n < 0)
-                fileContent = content;
-            else {
-                const validHours = [];
-                for (let i = 0; i < n; i++) {
-                    let h = hour - i;
-                    validHours.push(h.toString().padStart(2, '0'));
-                }
-                const filteredLines = lines.filter(line => {
-                    const hourPart = line.substring(0, 2);
-                    return validHours.includes(hourPart);
-                });
-                fileContent = filteredLines.join('\n');
-            }
-            var lastValues = [];
-            var res = GetLastValues(lines, "SCD30", 2);
-            if (res != null)
-                lastValues.push("SCD30: " + res); // "SCD30 (CO2): "
-            res = GetLastValues(lines, "EnsDht", 4);
-            if (res != null)
-                lastValues.push("EnsDht: " + res); // "EnsDht (TVOC): "
-            res = GetLastValues(lines, "TempHum", 0); //* THIS DOESN'T WORK!
-            if (res != null)
-                lastValues.push("TempHum: " + res); // "TempHum (temp)"
-              
-            spnLastValues.innerHTML = 'Last values → ' + lastValues.join(', ');
-        }
-
-        function GetLastValues(lines, sensor, idxValue) {
-            // if there is a line that contains <sensor>, take the <idxValue> value and write it to console
-            for (let i = lines.length - 1; i >= 0; i--) {
-                if (lines[i].includes(sensor)) {
-                    // write to console last part of this line when is split with ';'
-                    const parts = lines[i].split(';');
-                    if (idxValue < parts.length) {
-                        // console.log(sensor + ": " + parts[idxValue]);
-                        return parts[idxValue];
-                    }
-                    break;
-                }
-            }
-            return null;
-        }
-
-        function DisplayText(content) {
-            txtFile.innerHTML = content;
-            txtFile.scrollTop = txtFile.scrollHeight;
-            spnSensorTypeComment.innerHTML = '';
-        }
-
-        const NOTHING = '---';
-        var selectedSensor = NOTHING;
-        var fileContent;
-
-        function CmbFilesChange() {
-            if (cmbFiles.value == NOTHING) {
-                txtFile.innerHTML = '';
-                return;
-            }
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    TakeLastEntries(this.responseText.trim());
-                    DisplayText(fileContent);
-                    cmbSensors.innerHTML = '';
-                    var sensors = [];
-                    // var devices = [];
-                    for (const line of fileContent.split(/\r?\n/)) {
-                        const parts = line.split('\t');
-                        if (!sensors.includes(parts[1]))
-                            sensors.push(parts[1]);
-                        // if (!devices.includes(parts[2]))
-                        //     devices.push(parts[2]);
-                    }
-                    cmbSensors.appendChild(CreateOption(NOTHING, NOTHING));
-                    for (const s of sensors)
-                        cmbSensors.appendChild(CreateOption(s, s));
-                    // if (selectedSensor == NOTHING && sensors.includes('EnsDht'))
-                    //     selectedSensor = 'EnsDht';
-                    if (selectedSensor == NOTHING && sensors.includes('SCD30'))
-                        selectedSensor = 'SCD30';
-                    cmbSensors.value = selectedSensor;
-                    CmbSensorsChange();
-                }
-            };
-            selectedSensor = cmbSensors.value;
-            var url = '/log?list=file&name=/' + cmbFolders.value + '/' + cmbFiles.value;
-            xhttp.open('GET', url, true); xhttp.send();
-        }
-
-        function ChkDisplayChartCheck(check) {
-            chkDisplayChart.checked = check;
-            chkDisplayChart.onchange();
-        }
-
-        function CmbSensorsChange() {
-            const sens = cmbSensors.value;
-            if (sens == NOTHING)
-                DisplayText(fileContent);
-            else {
-                var lines = [];
-                for (const line of fileContent.split(/\r?\n/)) {
-                    const parts = line.split('\t');
-                    if (parts[1] == sens) {
-                        lines.push(parts[0] + ";" + parts[2] + ";" + parts[3]);
-                    }
-                }
-                DisplayText(lines.join('\n'));
-                var xhttp = new XMLHttpRequest();
-                xhttp.onreadystatechange = function () {
-                    if (this.readyState == 4 && this.status == 200) {
-                        // e.g. Air quality: temp(C), hum(%), status, eqCO2(ppm), TVOC, AQI
-                        var s = this.responseText;
-                        spnSensorTypeComment.innerHTML = s;
-                        var parts = s.split(': ');
-                        if (parts.length == 2) {
-                            s = parts[1];
-                            parts = s.split(', ');
-                            cmbChartParams.innerHTML = '';
-                            cmbChartParams.appendChild(CreateOption(-1, NOTHING));
-                            var idx = 0;
-                            for (const p of parts)
-                                cmbChartParams.appendChild(CreateOption(idx++, p));
-                        }
-                        cmbChartParams.value = lastChartParam[cmbSensors.value];
-                        ChkDisplayChartCheck(true);
-                        CmbChartParamsChange();
-                    }
-                };
-                var url = '/sensorTypeComment?sensor=' + cmbSensors.value;
-                xhttp.open('GET', url, true); xhttp.send();
-            }
-        }
-
-        function CreateOption(val, text) {
-            var opt = document.createElement('option');
-            opt.value = val;
-            opt.innerHTML = text;
-            return opt;
-        }
-
-        function CmbChartParamsChange() {
-            const col = parseInt(cmbChartParams.value);
-            if (col == -1)
-                ChkDisplayChartCheck(false);
-            else {
-                var xs = [];
-                var ys = [];
-                for (const line of txtFile.innerHTML.split(/\r?\n/)) {
-                    const parts = line.split(';');
-                    // 02:07:18;TestNodeMCU;26;34;1;927;712;4
-                    xs.push(parts[0]);
-                    ys.push(parts[2 + col]);
-                }
-                chart.data.labels = xs;
-                chart.data.datasets.forEach((ds) => {
-                    ds.data = ys;
-                });
-                chart.options.scales.y.min = 0;
-                chart.options.scales.y.ticks.stepSize = undefined;
-                if (cmbSensors.value == 'EnsDht' || cmbSensors.value == 'TempHum' || cmbSensors.value == 'SCD30') {
-                    if (cmbChartParams.value == 0) { // temp
-                        // const validYs = ys.filter(v => !isNaN(v));
-                        // chart.options.scales.y.min = Math.min(...validYs) - 1;
-                        chart.options.scales.y.min = 'auto';
-                        chart.options.scales.y.ticks.stepSize = 0.5;
-                    }
-                    if (cmbChartParams.value == 1) { // hum
-                        chart.options.scales.y.min = 'auto'; // Let Chart.js determine the min value
-                    }
-                }
-                chart.update();
-                lastChartParam[cmbSensors.value] = cmbChartParams.value;
-                // const l = lastChartParam[cmbSensors.value] = cmbChartParams.value;
-                // if (l != -1 && l != '')
-                //     spnLastValues.innerHTML = 'Last values: ' + ys.slice(-4).join(", ");
-            }
-        }
-
-        //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
-        //* default parameters: TVOC, temp
-        const lastChartParam = { EnsAht: 4, TempHum: 0, EnsDht: 4, BME680: 4, SCD30: 2 };
-
-        function RefreshFile() {
-            // console.log("Folder: " + cmbFolders.value + ", File: " + cmbFiles.value + ", Sensor: " + cmbSensors.value);
-            if (cmbSensors.value == '' || cmbSensors.value == null)
-                location.reload();
-            else {
-                if (cmbFolders.value == NOTHING)
-                    cmbFolders.focus();
-                else if (cmbFiles.value == NOTHING)
-                    cmbFiles.focus();
-                else
-                    CmbFilesChange();
-            }
-        }
-
-        function StatusInfo() {
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    spnStatusInfo.innerHTML = this.responseText;
-                }
-            };
-            var url = '/statusInfo';
-            xhttp.open('GET', url, true); xhttp.send();
-        }
-
-        function LoadNotifs() {
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    // 0	Water detected	1	1
-                    let table = document.getElementById("tblNotifSetts");
-                    while (table.rows.length > 1) // Remove all rows except the first one
-                        table.deleteRow(1);
-                    i = 1;
-                    for (const line of this.responseText.trim().split(/\r?\n/)) {
-                        const parts = line.split('\t');
-                        var row = tblNotifSetts.insertRow(i++);
-                        var cell1 = row.insertCell(0);
-                        var cell2 = row.insertCell(1);
-                        var cell3 = row.insertCell(2);
-                        cell1.innerHTML = parts[1];
-                        cell2.innerHTML = "<td><input type='checkbox' id='chk_B" + parts[0] + "' " + (parts[2] == "1" ? "checked" : "") + " onchange='ChangeNotif(this)'></td>";
-                        cell3.innerHTML = "<td><input type='checkbox' id='chk_W" + parts[0] + "' " + (parts[3] == "1" ? "checked" : "") + " onchange='ChangeNotif(this)'></td>";
-                        //                     <input type='checkbox' id='chkWater_B0' onchange='ChangeNotif(this)'>
-                    }
-                }
-            };
-            var url = '/nots';
-            xhttp.open('GET', url, true); xhttp.send();
-        }
-
-        function ChangeNotif(chk) {
-            idx = chk.id.lastIndexOf("_");
-            if (idx == -1)
-                return;
-            id = chk.id.substring(idx + 1);
-            var xhttp = new XMLHttpRequest();
-            var url = '/nots?id=' + id + "&val=" + Number(chk.checked);
-            xhttp.open('GET', url, true); xhttp.send();
-        }
-
-        function RemoveFolder() {
-            if (cmbFolders.value == NOTHING) {
-                alert("No folder selected");
-                return;
-            }
-            if (!confirm("Are you sure you want to remove folder '" + cmbFolders.value + "' and all its log files?"))
-                return;
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    if (this.responseText == "1") {
-                        alert("Folder removed. Please refresh the page.");
-                        LoadFolders();
-                    }
-                    else
-                        alert("Error removing folder");
-                }
-            };
-            var url = '/removeDir?dir=/' + cmbFolders.value;
-            xhttp.open('GET', url, true); xhttp.send();
-        }
-
-        function adjustChartWidth() {
-            // alert(window.innerWidth);
-            // tblChart.style.width = (window.innerWidth - 50) + 'px';
-            // myCanvas.style.width = '100%';
-            // alert(window.innerWidth + ", " + tblChart.style.width + ", " + myCanvas.style.width);
-            let width = window.innerWidth - 50;
-            tblChart.style.width = width + 'px';  // Set table width
-            myCanvas.style.width = width + 'px';   // Match canvas width
-            myCanvas.width = width;  // Explicitly set the canvas width to match
-        }
-        window.addEventListener('resize', adjustChartWidth);
-
-        function setup() {
-            adjustChartWidth();
-            // TODO ukinuti ovo - chk treba da zadrzi startu vrednost posle ucitavanja
-            // chkDisplayChart.checked = false;
-            ChkDisplayChartCheck(false);
-            LoadNotifs();
-            TimeWatcherLoad();
-            LoadFolders();
-        }
-
-        window.addEventListener("pageshow", function (event) {
-            if (event.persisted) {
-                FetchNewData(); // Only fetch if restored from bfcache
-            }
+        const filteredLines = lines.filter(line => {
+          const hourPart = line.substring(0, 2);
+          return validHours.includes(hourPart);
         });
-    </script>
+        fileContent = filteredLines.join('\n');
+      }
+      var lastValues = [];
+      var res = GetLastValues(lines, "SCD30", 2);
+      if (res != null)
+        lastValues.push("SCD30: " + res); // "SCD30 (CO2): "
+      res = GetLastValues(lines, "EnsDht", 4);
+      if (res != null)
+        lastValues.push("EnsDht: " + res); // "EnsDht (TVOC): "
+      res = GetLastValues(lines, "TempHum", 0); //* THIS DOESN'T WORK!
+      if (res != null)
+        lastValues.push("TempHum: " + res); // "TempHum (temp)"
+
+      spnLastValues.innerHTML = 'Last values → ' + lastValues.join(', ');
+    }
+
+    function GetLastValues(lines, sensor, idxValue) {
+      // if there is a line that contains <sensor>, take the <idxValue> value and write it to console
+      for (let i = lines.length - 1; i >= 0; i--) {
+        if (lines[i].includes(sensor)) {
+          // write to console last part of this line when is split with ';'
+          const parts = lines[i].split(';');
+          if (idxValue < parts.length) {
+            // console.log(sensor + ": " + parts[idxValue]);
+            return parts[idxValue];
+          }
+          break;
+        }
+      }
+      return null;
+    }
+
+    function DisplayText(content) {
+      txtFile.innerHTML = content;
+      txtFile.scrollTop = txtFile.scrollHeight;
+      spnSensorTypeComment.innerHTML = '';
+    }
+
+    const NOTHING = '---';
+    var selectedSensor = NOTHING;
+    var fileContent;
+
+    function CmbFilesChange() {
+      if (cmbFiles.value == NOTHING) {
+        txtFile.innerHTML = '';
+        return;
+      }
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          TakeLastEntries(this.responseText.trim());
+          DisplayText(fileContent);
+          cmbSensors.innerHTML = '';
+          var sensors = [];
+          // var devices = [];
+          for (const line of fileContent.split(/\r?\n/)) {
+            const parts = line.split('\t');
+            if (!sensors.includes(parts[1]))
+              sensors.push(parts[1]);
+            // if (!devices.includes(parts[2]))
+            //     devices.push(parts[2]);
+          }
+          cmbSensors.appendChild(CreateOption(NOTHING, NOTHING));
+          for (const s of sensors)
+            cmbSensors.appendChild(CreateOption(s, s));
+          // if (selectedSensor == NOTHING && sensors.includes('EnsDht'))
+          //     selectedSensor = 'EnsDht';
+          if (selectedSensor == NOTHING && sensors.includes('SCD30'))
+            selectedSensor = 'SCD30';
+          cmbSensors.value = selectedSensor;
+          CmbSensorsChange();
+        }
+      };
+      selectedSensor = cmbSensors.value;
+      var url = '/log?list=file&name=/' + cmbFolders.value + '/' + cmbFiles.value;
+      xhttp.open('GET', url, true); xhttp.send();
+    }
+
+    function ChkDisplayChartCheck(check) {
+      chkDisplayChart.checked = check;
+      chkDisplayChart.onchange();
+    }
+
+    function CmbSensorsChange() {
+      const sens = cmbSensors.value;
+      if (sens == NOTHING)
+        DisplayText(fileContent);
+      else {
+        var lines = [];
+        for (const line of fileContent.split(/\r?\n/)) {
+          const parts = line.split('\t');
+          if (parts[1] == sens) {
+            lines.push(parts[0] + ";" + parts[2] + ";" + parts[3]);
+          }
+        }
+        DisplayText(lines.join('\n'));
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+          if (this.readyState == 4 && this.status == 200) {
+            // e.g. Air quality: temp(C), hum(%), status, eqCO2(ppm), TVOC, AQI
+            var s = this.responseText;
+            spnSensorTypeComment.innerHTML = s;
+            var parts = s.split(': ');
+            if (parts.length == 2) {
+              s = parts[1];
+              parts = s.split(', ');
+              cmbChartParams.innerHTML = '';
+              cmbChartParams.appendChild(CreateOption(-1, NOTHING));
+              var idx = 0;
+              for (const p of parts)
+                cmbChartParams.appendChild(CreateOption(idx++, p));
+            }
+            cmbChartParams.value = lastChartParam[cmbSensors.value];
+            ChkDisplayChartCheck(true);
+            CmbChartParamsChange();
+          }
+        };
+        var url = '/sensorTypeComment?sensor=' + cmbSensors.value;
+        xhttp.open('GET', url, true); xhttp.send();
+      }
+    }
+
+    function CreateOption(val, text) {
+      var opt = document.createElement('option');
+      opt.value = val;
+      opt.innerHTML = text;
+      return opt;
+    }
+
+    function CmbChartParamsChange() {
+      const col = parseInt(cmbChartParams.value);
+      if (col == -1)
+        ChkDisplayChartCheck(false);
+      else {
+        var xs = [];
+        var ys = [];
+        for (const line of txtFile.innerHTML.split(/\r?\n/)) {
+          const parts = line.split(';');
+          // 02:07:18;TestNodeMCU;26;34;1;927;712;4
+          xs.push(parts[0]);
+          ys.push(parts[2 + col]);
+        }
+        chart.data.labels = xs;
+        chart.data.datasets.forEach((ds) => {
+          ds.data = ys;
+        });
+        chart.options.scales.y.min = 0;
+        chart.options.scales.y.ticks.stepSize = undefined;
+        if (cmbSensors.value == 'EnsDht' || cmbSensors.value == 'TempHum' || cmbSensors.value == 'SCD30') {
+          if (cmbChartParams.value == 0) { // temp
+            // const validYs = ys.filter(v => !isNaN(v));
+            // chart.options.scales.y.min = Math.min(...validYs) - 1;
+            chart.options.scales.y.min = 'auto';
+            chart.options.scales.y.ticks.stepSize = 0.5;
+          }
+          if (cmbChartParams.value == 1) { // hum
+            chart.options.scales.y.min = 'auto'; // Let Chart.js determine the min value
+          }
+        }
+        chart.update();
+        lastChartParam[cmbSensors.value] = cmbChartParams.value;
+        // const l = lastChartParam[cmbSensors.value] = cmbChartParams.value;
+        // if (l != -1 && l != '')
+        //     spnLastValues.innerHTML = 'Last values: ' + ys.slice(-4).join(", ");
+      }
+    }
+
+    //TODO ovo bi trebalo uopstiti - svaki senzor bi trebalo da ima svoj def param
+    //* default parameters: TVOC, temp
+    const lastChartParam = { EnsAht: 4, TempHum: 0, EnsDht: 4, BME680: 4, SCD30: 2 };
+
+    function RefreshFile() {
+      // console.log("Folder: " + cmbFolders.value + ", File: " + cmbFiles.value + ", Sensor: " + cmbSensors.value);
+      if (cmbSensors.value == '' || cmbSensors.value == null)
+        location.reload();
+      else {
+        if (cmbFolders.value == NOTHING)
+          cmbFolders.focus();
+        else if (cmbFiles.value == NOTHING)
+          cmbFiles.focus();
+        else
+          CmbFilesChange();
+      }
+    }
+
+    function StatusInfo() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          spnStatusInfo.innerHTML = this.responseText;
+        }
+      };
+      var url = '/statusInfo';
+      xhttp.open('GET', url, true); xhttp.send();
+    }
+
+    function LoadNotifs() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          // 0	Water detected	1	1
+          let table = document.getElementById("tblNotifSetts");
+          while (table.rows.length > 1) // Remove all rows except the first one
+            table.deleteRow(1);
+          i = 1;
+          for (const line of this.responseText.trim().split(/\r?\n/)) {
+            const parts = line.split('\t');
+            var row = tblNotifSetts.insertRow(i++);
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            cell1.innerHTML = parts[1];
+            cell2.innerHTML = "<td><input type='checkbox' id='chk_B" + parts[0] + "' " + (parts[2] == "1" ? "checked" : "") + " onchange='ChangeNotif(this)'></td>";
+            cell3.innerHTML = "<td><input type='checkbox' id='chk_W" + parts[0] + "' " + (parts[3] == "1" ? "checked" : "") + " onchange='ChangeNotif(this)'></td>";
+            //                     <input type='checkbox' id='chkWater_B0' onchange='ChangeNotif(this)'>
+          }
+        }
+      };
+      var url = '/nots';
+      xhttp.open('GET', url, true); xhttp.send();
+    }
+
+    function ChangeNotif(chk) {
+      idx = chk.id.lastIndexOf("_");
+      if (idx == -1)
+        return;
+      id = chk.id.substring(idx + 1);
+      var xhttp = new XMLHttpRequest();
+      var url = '/nots?id=' + id + "&val=" + Number(chk.checked);
+      xhttp.open('GET', url, true); xhttp.send();
+    }
+
+    function RemoveFolder() {
+      if (cmbFolders.value == NOTHING) {
+        alert("No folder selected");
+        return;
+      }
+      if (!confirm("Are you sure you want to remove folder '" + cmbFolders.value + "' and all its log files?"))
+        return;
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          if (this.responseText == "1") {
+            alert("Folder removed. Please refresh the page.");
+            LoadFolders();
+          }
+          else
+            alert("Error removing folder");
+        }
+      };
+      var url = '/removeDir?dir=/' + cmbFolders.value;
+      xhttp.open('GET', url, true); xhttp.send();
+    }
+
+    function adjustChartWidth() {
+      // alert(window.innerWidth);
+      // tblChart.style.width = (window.innerWidth - 50) + 'px';
+      // myCanvas.style.width = '100%';
+      // alert(window.innerWidth + ", " + tblChart.style.width + ", " + myCanvas.style.width);
+      let width = window.innerWidth - 50;
+      tblChart.style.width = width + 'px';  // Set table width
+      myCanvas.style.width = width + 'px';   // Match canvas width
+      myCanvas.width = width;  // Explicitly set the canvas width to match
+    }
+    window.addEventListener('resize', adjustChartWidth);
+
+    function setup() {
+      adjustChartWidth();
+      // TODO ukinuti ovo - chk treba da zadrzi startu vrednost posle ucitavanja
+      // chkDisplayChart.checked = false;
+      ChkDisplayChartCheck(false);
+      LoadNotifs();
+      TimeWatcherLoad();
+      LoadFolders();
+    }
+
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) {
+        FetchNewData(); // Only fetch if restored from bfcache
+      }
+    });
+  </script>
 </head>
 
 <body onload="setup();">
-    <h1>Sensor Node</h1>
+  <h1>Sensor Node</h1>
 
-    <h2>Data in log files</h2>
+  <h2>Data in log files</h2>
 
-    <div class="segment">
-        <table id="tblData" style="width: 100%;">
-            <tr>
-                <!-- <td style="width: 100px;">Folder:</td> -->
-                <td class="firstCol">Folder:</td>
-                <td>
-                    <select id="cmbFolders" onchange="CmbFoldersChange();">
-                        <option>---</option>
-                    </select>
-                    <button onclick="RemoveFolder()" title="Remove folder (all logs for selected month)">❌</button>
-                </td>
-            </tr>
-            <tr>
-                <td>File:</td>
-                <td>
-                    <select id="cmbFiles" onchange="CmbFilesChange()">
-                        <option>---</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td style="vertical-align: top;">Sensor:</td>
-                <td>
-                    <select id="cmbSensors" onchange="CmbSensorsChange()">
-                        <option>---</option>
-                        <!-- <option>test</option> -->
-                    </select>
-                    <span id="spnSensorTypeComment" style="margin-left: 10px;"></span>
-                </td>
-            </tr>
-            <!-- <tr>
+  <div class="segment">
+    <table id="tblData" style="width: 100%;">
+      <tr>
+        <!-- <td style="width: 100px;">Folder:</td> -->
+        <td class="firstCol">Folder:</td>
+        <td>
+          <select id="cmbFolders" onchange="CmbFoldersChange();">
+            <option>---</option>
+          </select>
+          <button onclick="RemoveFolder()" title="Remove folder (all logs for selected month)">❌</button>
+        </td>
+      </tr>
+      <tr>
+        <td>File:</td>
+        <td>
+          <select id="cmbFiles" onchange="CmbFilesChange()">
+            <option>---</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td style="vertical-align: top;">Sensor:</td>
+        <td>
+          <select id="cmbSensors" onchange="CmbSensorsChange()">
+            <option>---</option>
+            <!-- <option>test</option> -->
+          </select>
+          <span id="spnSensorTypeComment" style="margin-left: 10px;"></span>
+        </td>
+      </tr>
+      <!-- <tr>
             <td>Devices:</td>
             <td>
                 <select id="cmbDevices" onchange="">
@@ -531,147 +531,151 @@
                 </select>
             </td>
         </tr> -->
-            <tr>
-                <!-- <td style="vertical-align: top; width: 100px;">File Content:</td> -->
-                <td colspan="2">
-                    <textarea id="txtFile" rows="10" readonly
-                        style="font-family: 'Courier New', Courier, monospace; width: 100%;"></textarea>
-                    <div>
-                        <input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="RefreshFile()">
-                    </div>
-                    <span id="spnLastValues"></span>
-                </td>
-            </tr>
-        </table>
+      <tr>
+        <!-- <td style="vertical-align: top; width: 100px;">File Content:</td> -->
+        <td colspan="2">
+          <textarea id="txtFile" rows="10" readonly
+            style="font-family: 'Courier New', Courier, monospace; width: 100%;"></textarea>
+          <div>
+            <input type="button" id='btnRefreshFile' class="btn" value="Refresh" onclick="RefreshFile()">
+          </div>
+          <span id="spnLastValues"></span>
+        </td>
+      </tr>
+    </table>
 
-        <div id="divChart">
-            <input type="checkbox" id="chkDisplayChart" checked
-                onchange="tblChart.style.visibility = this.checked ? 'visible' : 'collapse';" />
-            <label for="chkDisplayChart">Display Chart</label>
-            <table id="tblChart">
-                <tr>
-                    <td class="firstCol">Parameter:</td>
-                    <td>
-                        <select id="cmbChartParams" onchange="CmbChartParamsChange()">
-                            <option>---</option>
-                        </select>
-                        &nbsp;
-                        <!-- <span id="spnLastValues"></span> -->
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="2">
-                        <canvas id="myCanvas"></canvas>
-                        <script>
+    <div id="divChart">
+      <input type="checkbox" id="chkDisplayChart" checked
+        onchange="tblChart.style.visibility = this.checked ? 'visible' : 'collapse';" />
+      <label for="chkDisplayChart">Display Chart</label>
+      <table id="tblChart">
+        <tr>
+          <td class="firstCol">Parameter:</td>
+          <td>
+            <select id="cmbChartParams" onchange="CmbChartParamsChange()">
+              <option>---</option>
+            </select>
+            &nbsp;
+            <!-- <span id="spnLastValues"></span> -->
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <canvas id="myCanvas"></canvas>
+            <script>
 
-                        </script>
-                    </td>
-                </tr>
-            </table>
-        </div>
+            </script>
+          </td>
+        </tr>
+      </table>
     </div>
+  </div>
 
-    <h2>Notification Settings</h2>
-    <div class="segment">
-        <table id="tblNotifSetts">
-            <tr>
-                <th>Event</th>
-                <th>Buzz</th>
-                <th>WA msg</th>
-            </tr>
-        </table>
-    </div>
+  <h2>Notification Settings</h2>
+  <div class="segment">
+    <table id="tblNotifSetts">
+      <tr>
+        <th>Event</th>
+        <th>Buzz</th>
+        <th>WA msg</th>
+      </tr>
+    </table>
+  </div>
 
-    <h2>Links</h2>
-    <div class="segment">
-        <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">
-            <img src="img/iq_air_16.png" class="linkIcon" />IQ Air - Banovo Brdo</a><br>
-        <a href="https://www.hidmet.gov.rs/latin/prognoza/stanica.php?mp_id=13274&nor=da">
-            <img src="img/rhmz.ico" class="linkIcon" />RHMZ - Beograd, 5 dana</a><br>
-        <a href="https://xeco.info/xeco/vazduh/Beograd%20%C4%8Cukarica-Kraljice%20Katarine-1000012">
-            <img src="img/xeco-blue-72.png" class="linkIcon" />xEco - Čukarica, KK</a><br>
-        <a href="https://www.google.com/search?q=vreme+banovo+brdo">
-            <img src="img/google_16.png" class="linkIcon" />Weather - Banovo Brdo</a><br>
-        <a href="https://www.google.com/search?q=vreme+umka">
-            <img src="img/google_16.png" class="linkIcon" />Weather - Umka</a><br>
-        <a href="https://www.google.com/search?q=vreme+vranić">
-            <img src="img/google_16.png" class="linkIcon" />Weather - Vranić</a><br>
-    </div>
+  <h2>Links</h2>
+  <div class="segment">
+    &nbsp;&nbsp;
+    <a href="http://192.168.1.80/">B. Brdo</a>
+    &lt;-&gt;
+    <a href="http://192.168.8.80/">Vranić</a><br>
+    <a href="https://www.iqair.com/air-quality-map/serbia/central-serbia/belgrade">
+      <img src="img/iq_air_16.png" class="linkIcon" />IQ Air - Banovo Brdo</a><br>
+    <a href="https://www.hidmet.gov.rs/latin/prognoza/stanica.php?mp_id=13274&nor=da">
+      <img src="img/rhmz.ico" class="linkIcon" />RHMZ - Beograd, 5 dana</a><br>
+    <a href="https://xeco.info/xeco/vazduh/Beograd%20%C4%8Cukarica-Kraljice%20Katarine-1000012">
+      <img src="img/xeco-blue-72.png" class="linkIcon" />xEco - Čukarica, KK</a><br>
+    <a href="https://www.google.com/search?q=vreme+banovo+brdo">
+      <img src="img/google_16.png" class="linkIcon" />Weather - Banovo Brdo</a><br>
+    <a href="https://www.google.com/search?q=vreme+umka">
+      <img src="img/google_16.png" class="linkIcon" />Weather - Umka</a><br>
+    <a href="https://www.google.com/search?q=vreme+vranić">
+      <img src="img/google_16.png" class="linkIcon" />Weather - Vranić</a><br>
+  </div>
 
-    <div style="margin: 20px 0;">
-        <h2 style="display: inline; margin-right: 20px;">Status Info</h2>
-        <button onclick="StatusInfo()" title="Show status info">🔽</button>
-        <button onclick="spnStatusInfo.innerHTML = ''" title="Hide status info">🔼</button>
-    </div>
-    <div class="segment">
-        <span id="spnStatusInfo"></span>
-    </div>
+  <div style="margin: 20px 0;">
+    <h2 style="display: inline; margin-right: 20px;">Status Info</h2>
+    <button onclick="StatusInfo()" title="Show status info">🔽</button>
+    <button onclick="spnStatusInfo.innerHTML = ''" title="Hide status info">🔼</button>
+  </div>
+  <div class="segment">
+    <span id="spnStatusInfo"></span>
+  </div>
 
-    <h2>Time Watcher</h2>
+  <h2>Time Watcher</h2>
 
-    <div class="segment">
-        <input type="checkbox" id="chkIsItOn" onchange="TimeWatcherChange(this)" />
-        <label for="chkIsItOn">Is it ON</label>
-        <br />
-        <label for="selBuzzMin">Buzz on </label>
-        <select id="selBuzzMin" onchange="TimeWatcherChange(this)">
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="30">30</option>
-            <option value="60">60</option>
-        </select>
-        minutes
-    </div>
-    <div style="margin-top: 30px;">
-        <button onclick="fetch('/reset')" title="Reset Hub">🔄 Reset</button>
-    </div>
-    <script>
-        var xValues = []; // '01:36:22', '01:39:22', '01:55:35'
-        const yValues = []; // 1, 4, 9
-        canvas = document.getElementById('myCanvas');
-        chart = new Chart(canvas.getContext('2d'), {
-            type: "line",
-            data: {
-                labels: xValues,
-                datasets: [{
-                    fill: false,
-                    lineTension: 0,
-                    backgroundColor: "rgba(0,0,255,1.0)",
-                    borderColor: "rgba(0,0,255,0.1)",
-                    data: yValues
-                }]
+  <div class="segment">
+    <input type="checkbox" id="chkIsItOn" onchange="TimeWatcherChange(this)" />
+    <label for="chkIsItOn">Is it ON</label>
+    <br />
+    <label for="selBuzzMin">Buzz on </label>
+    <select id="selBuzzMin" onchange="TimeWatcherChange(this)">
+      <option value="5">5</option>
+      <option value="10">10</option>
+      <option value="30">30</option>
+      <option value="60">60</option>
+    </select>
+    minutes
+  </div>
+  <div style="margin-top: 30px;">
+    <button onclick="fetch('/reset')" title="Reset Hub">🔄 Reset</button>
+  </div>
+  <script>
+    var xValues = []; // '01:36:22', '01:39:22', '01:55:35'
+    const yValues = []; // 1, 4, 9
+    canvas = document.getElementById('myCanvas');
+    chart = new Chart(canvas.getContext('2d'), {
+      type: "line",
+      data: {
+        labels: xValues,
+        datasets: [{
+          fill: false,
+          lineTension: 0,
+          backgroundColor: "rgba(0,0,255,1.0)",
+          borderColor: "rgba(0,0,255,0.1)",
+          data: yValues
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'hour',
+              displayFormats: {
+                hour: 'HH:mm'  // 'HH' ?
+              }
             },
-            options: {
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'hour',
-                            displayFormats: {
-                                hour: 'HH:mm'  // 'HH' ?
-                            }
-                        },
-                        ticks: {
-                            // stepSize: 5 // Show label every 5 minutes                                            }
-                            // autoSkip: true,
-                            // maxTicksLimit: 10 // Show a maximum of 6 labels
-                            source: 'auto', // Let Chart.js position the ticks
-                            stepSize: 1      // Ensure only full hours are shown
-                        }
-                    },
-                    y: { min: 0 }
-                }
+            ticks: {
+              // stepSize: 5 // Show label every 5 minutes                                            }
+              // autoSkip: true,
+              // maxTicksLimit: 10 // Show a maximum of 6 labels
+              source: 'auto', // Let Chart.js position the ticks
+              stepSize: 1      // Ensure only full hours are shown
             }
-        });
-        // window.myChart = chart;
+          },
+          y: { min: 0 }
+        }
+      }
+    });
+    // window.myChart = chart;
 
-        // window.addEventListener('scroll', () => {
-        //     if (window.myChart) {
-        //         window.myChart.resize();  // forces Chart.js to repaint
-        //     }
-        // });
-    </script>
+    // window.addEventListener('scroll', () => {
+    //     if (window.myChart) {
+    //         window.myChart.resize();  // forces Chart.js to repaint
+    //     }
+    // });
+  </script>
 </body>
 
 </html>

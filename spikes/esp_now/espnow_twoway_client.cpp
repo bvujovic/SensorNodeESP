@@ -12,7 +12,8 @@
 
 #include "MacAddresses.h"
 // uint8_t mac[] = {0x30, 0xC6, 0xF7, 0x04, 0x66, 0x04};
-uint8_t *mac = macSoftEsp32DevIpex;
+// uint8_t *mac = macSoftEsp32DevIpex;
+uint8_t *mac = macEsp32BattConnVranic;
 bool sendSuccess = true;
 
 #ifdef ESP32
@@ -94,7 +95,7 @@ void setup()
 #endif
 }
 
-char msg[] = "time";
+char msg[] = "millis"; // "time"
 ulong msLastSend = 0;
 
 void loop()

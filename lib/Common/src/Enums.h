@@ -23,8 +23,8 @@ enum SensorType
   /// @brief Data from BME680 module: temp, hum, ECO2, TVOC... (AirData)
   BME680,
 
-  /// @brief Data from SCD30 sensor: CO2, temp, hum... (AirData)
-  SCD30,
+  /// @brief Data from Sensirion SCD (SCD30, SCD41...) sensor: CO2, temp, hum... (AirData)
+  SCD,
   /// @brief Number of sensor types
   SensorTypeCount
 };
@@ -40,7 +40,7 @@ enum Device
   Wemos2,
   ESP32DevKit,
   ESP32BattConn,
-  ESP32C3SuperMiniBlue,
+  ESP32C3ProMini1,
   ESP32C3ant1,
   ESP32C3Xiao,
 };
