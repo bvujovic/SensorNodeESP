@@ -120,6 +120,7 @@ void setup()
     sendTimeRequest();
 
   Wire.begin(8, 9);
+  // Wire.setClock(100000); // Set I2C clock speed to 100kHz
   scd.begin(Wire, 0x62); // Use the default I2C address for SCD41 (0x62)
 
   Serial.println("Setup complete, waiting for time response...");
@@ -134,7 +135,7 @@ void loop()
     // Wire.begin(8, 9);
     // scd.begin(Wire, 0x62); // Use the default I2C address for SCD41 (0x62)
     scd.stopPeriodicMeasurement();
-    auto error = scd.measureSingleShot();
+    auto error = scd.measureSingleShot(); // blocking call, takes ~5s to complete
     if (error)
     {
       Serial.println("Failed to trigger single shot.");
@@ -143,7 +144,7 @@ void loop()
     // Wait for measurement completion
     bool isDataReady = false;
     ulong startTime = millis();
-    const ulong TIMEOUT_MS = 6000;
+    const ulong TIMEOUT_MS = 3000;
 
     // Poll until data is ready or timeout expires
     while (!isDataReady && (millis() < startTime + TIMEOUT_MS))
@@ -176,7 +177,7 @@ void loop()
       Serial.println("Data not ready yet.");
       ledOnDelay(10);
       // goToSleep(tss.getDeepSleepTime());
-      goToSleep((tss.getSlotMin() * 60 - 30) * 1000000UL);
+      goToSleep((tss.getSlotMin() * 60 - 30) * 1000000UL); // Sleep until next slot minus 30 seconds
     }
     delay(100); // wait for send callback
     goToSleep(tss.getDeepSleepTime());

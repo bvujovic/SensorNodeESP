@@ -36,7 +36,8 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
       - [ ] Improve interface (chart.js disappears, shrinks)
   - [ ] Messages to the hub: ESP32CAM - take a picture, indoor vehicle - start, move...
     - [ ] (WIP) Make ESP32-C3 client that sleeps and gets a message from the hub
-    - [ ] Test current hub code @BanovoBrdo
+    - [ ] (bug) connection to Azure drops after 1.5-2 seconds
+    - [x] Test current hub code @BanovoBrdo
     - [ ] Put Azure code in a class (e.g. AzureMessages/AzureThings)
     - [ ] ESP32-C3 turn up ESP32CAM and forward message from the hub
 - [ ] Clients:
@@ -50,10 +51,12 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
       - [ ] Button click: print log on Serial and send data (prev data or wait for new?) to the hub
   - [ ] Add more sensor nodes
     - [ ] (WIP) SCD41 (CO2 sensor)
-      - [ ] It gets data from sensor every other time (single shot measure, every 5min). Why? Check how much time does the sensor need for measuring. Maybe include logger.
-      - [ ] Send data at the right time ()
+      - [ ] It gets data from sensor every other time (single shot measure, every 5min). Why? Sensor needs 5-6 seconds for measuring. Include logger.
+      - [ ] Send data at the right time
       - [ ] Check reliability of data
-      - [ ] Measure current consumption
+      - [ ] Measure current consumption @~4V: awake 20mA, sleep 0.16mA, estimated ~2mA on average
+      - [ ] Check how often "data is not ready" and what causes it.
+        - [ ] Can "measure first, connect to wifi and send data after" solve this problem?
     - [ ] Microphone (noise levels)
 
 ## Add new client routine

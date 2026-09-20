@@ -53,9 +53,9 @@ ulong msLastTimeSync = 0;
 // callback function to show when NTP was synchronized
 void cbSyncTime(struct timeval *tv)
 {
-  Serial.println(F(" *** NTP time synched! *** "));
-  msLastTimeSync = millis();
-  Serial.println(msLastTimeSync);
+  Serial.printf("NTP time synched! %lu \n", msLastTimeSync = millis());
+  // msLastTimeSync = millis();
+  // Serial.println(msLastTimeSync);
 }
 
 #include "TimeWatcher.h"
@@ -103,67 +103,69 @@ void wifiConfig(bool isStaticIP)
   // WiFi.channel(1); // set channel to 1, so ESP-NOW and WiFi AP are on the same channel
 }
 
-#include <WiFiClientSecure.h>
-#include <PubSubClient.h> // lib_deps = knolleary/PubSubClient @ ^2.8
-#include "azure-secrets.h"
+// #include <WiFiClientSecure.h>
+// #include <PubSubClient.h> // lib_deps = knolleary/PubSubClient @ ^2.8
+// #include "azure-secrets.h"
+#include "ActionNodes.h"
+ActionNodes actionNodes(logger); // Create an instance of ActionNodes and pass the logger reference
 
-// Azure Configuration Details
-const char *mqtt_server = SECRET_MQTT_SERVER;
-const int mqtt_port = 8883;
-const char *client_id = SECRET_DEVICE_ID; // Must match Azure Device ID exactly
+// // Azure Configuration Details
+// const char *mqtt_server = SECRET_MQTT_SERVER;
+// const int mqtt_port = 8883;
+// const char *client_id = SECRET_DEVICE_ID; // Must match Azure Device ID exactly
 
-// Username format MUST be exactly this:
-const char *mqtt_username = SECRET_MQTT_USER;
+// // Username format MUST be exactly this:
+// const char *mqtt_username = SECRET_MQTT_USER;
 
-// Paste your entire 1-year SAS token here:
-const char *mqtt_password = SECRET_SAS_TOKEN;
+// // Paste your entire 1-year SAS token here:
+// const char *mqtt_password = SECRET_SAS_TOKEN;
 
-// The Azure topic for Cloud-to-Device messages
-const char *c2d_topic = "devices/TestSensorHub/messages/devicebound/#";
+// // The Azure topic for Cloud-to-Device messages
+// const char *c2d_topic = "devices/TestSensorHub/messages/devicebound/#";
 
-WiFiClientSecure azureSecureClient;
-PubSubClient azureMqttClient(azureSecureClient);
+// WiFiClientSecure azureSecureClient;
+// PubSubClient azureMqttClient(azureSecureClient);
 
-// Remote Node Wake Queue Variables
-bool hasPendingCommand = false;
-uint8_t pendingCommandPayload = 0;
+// // Remote Node Wake Queue Variables
+// bool hasPendingCommand = false;
+// uint8_t pendingCommandPayload = 0;
 
-// 1. Handle incoming commands sent from the Azure Cloud
-void azureCallback(char *topic, byte *payload, unsigned int length)
-{
-  String s = "azureCallback";
+// // 1. Handle incoming commands sent from the Azure Cloud
+// void azureCallback(char *topic, byte *payload, unsigned int length)
+// {
+//   String s = "azureCallback";
 
-  Serial.print("Cloud message arrived on topic: ");
-  Serial.println(topic);
+//   Serial.print("Cloud message arrived on topic: ");
+//   Serial.println(topic);
 
-  if (length > 0)
-  {
-    // Capture the command byte (e.g. '1', '2', etc.)
-    pendingCommandPayload = payload[0];
-    hasPendingCommand = true;
-    Serial.printf("Command buffered for battery node: %c\n", pendingCommandPayload);
-    s += String(" - Command buffered for battery node: ") + (char)pendingCommandPayload;
-    logger.add("Azure", "HUB", s.c_str());
-  }
-}
+//   if (length > 0)
+//   {
+//     // Capture the command byte (e.g. '1', '2', etc.)
+//     pendingCommandPayload = payload[0];
+//     hasPendingCommand = true;
+//     Serial.printf("Command buffered for battery node: %c\n", pendingCommandPayload);
+//     s += String(" - Command buffered for battery node: ") + (char)pendingCommandPayload;
+//     logger.add("Azure", "HUB", s.c_str());
+//   }
+// }
 
-// 2. Manage connecting/reconnecting to Azure
-void connectToAzure()
-{
-  if (azureMqttClient.connected())
-    return;
+// // 2. Manage connecting/reconnecting to Azure
+// void connectToAzure()
+// {
+//   if (azureMqttClient.connected())
+//     return;
 
-  Serial.print("Attempting Azure IoT Hub connection... ");
+//   Serial.print("Attempting Azure IoT Hub connection... ");
 
-  // Azure requires the ClientID, Username, and SAS Token Password
-  if (azureMqttClient.connect(client_id, mqtt_username, mqtt_password))
-  {
-    Serial.println("Connected to Azure!");
-    azureMqttClient.subscribe(c2d_topic);
-  }
-  else
-    Serial.printf("Failed connection, rc=%d. Try again in next loop.\n", azureMqttClient.state());
-}
+//   // Azure requires the ClientID, Username, and SAS Token Password
+//   if (azureMqttClient.connect(client_id, mqtt_username, mqtt_password))
+//   {
+//     Serial.println("Connected to Azure!");
+//     azureMqttClient.subscribe(c2d_topic);
+//   }
+//   else
+//     Serial.printf("Failed connection, rc=%d. Try again in next loop.\n", azureMqttClient.state());
+// }
 
 // // The Azure telemetry topic format
 // const char *d2c_topic = "devices/TestSensorHub/messages/events/";
@@ -333,15 +335,21 @@ void setup()
     while (true)
       delay(100);
   }
+  // uint32_t version;
+  // if (esp_now_get_version(&version) == ESP_OK)
+  //   Serial.printf("ESP-NOW Protocol Version: v%s", version == 1 ? "1.0" : "2.0");
+  // else
+  //   Serial.println("Failed to fetch ESP-NOW version");
   setPeers();
   // esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
   esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb(OnDataSent);
 
-  // Azure IoT Hub
-  azureSecureClient.setInsecure(); // Don't validate the TLS certificate chain (saves memory and avoids certificate expiration crashes)
-  azureMqttClient.setServer(mqtt_server, mqtt_port);
-  azureMqttClient.setCallback(azureCallback);
+  // // Azure IoT Hub
+  // azureSecureClient.setInsecure(); // Don't validate the TLS certificate chain (saves memory and avoids certificate expiration crashes)
+  // azureMqttClient.setServer(mqtt_server, mqtt_port);
+  // azureMqttClient.setCallback(azureCallback);
+  actionNodes.init();
 }
 
 String message;
@@ -366,14 +374,14 @@ void loop()
         {
           if (notif->wa_msg)
           {
-            wifiConfig(false); //? test if this is necessary? probably not
-            delay(3000);
+            // wifiConfig(false); //? test if this is necessary? probably not
+            // delay(3000);
             // 💥Stan, kuhinja, sudopera:
             // VISOK NIVO VODE U SUDOPERI 💦
             auto res = NotifyWhatsApp::sendMessage("%F0%9F%92%A5+Stan,+kuhinja,+sudopera:%0AVISOK+NIVO+VODE+U+SUDOPERI!+%F0%9F%92%A6");
             if (res != CMB_OK)
               logger.add(CMB_LOG_TYPE, "ESP32Hub", NotifyWhatsApp::errorMessage(res));
-            wifiConfig(true);
+            // wifiConfig(true);
           }
           if (notif->buzz)
             buzzer.blinkCritical();
@@ -418,18 +426,20 @@ void loop()
   //     Serial.println("WhatsApp Bot error res: " + String(res));
   // }
 
-  if (!azureMqttClient.connected())
-  {
-    static ulong lastReconnectAttempt = 0;
-    ulong now = millis();
-    if (now - lastReconnectAttempt > 10000) //* make this interval longer...
-    {
-      lastReconnectAttempt = now;
-      connectToAzure();
-    }
-  }
-  else
-    azureMqttClient.loop();
+  // if (!azureMqttClient.connected())
+  // {
+  //   static ulong lastReconnectAttempt = 0;
+  //   ulong now = millis();
+  //   if (now - lastReconnectAttempt > 10000) //* make this interval longer after a few tries
+  //   {
+  //     lastReconnectAttempt = now;
+  //     connectToAzure();
+  //   }
+  // }
+  // else
+  //   azureMqttClient.loop();
+  
+  actionNodes.loop();
 
   delay(10);
 }
