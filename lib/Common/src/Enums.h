@@ -1,7 +1,7 @@
 #pragma once
 
-// #define BANOVO_BRDO
-#define VRANIC
+#define BANOVO_BRDO
+// #define VRANIC
 
 // TODO Pogledati https://stackoverflow.com/questions/11714325/how-to-get-enum-item-name-from-its-value
 
@@ -23,8 +23,10 @@ enum SensorType
   /// @brief Data from BME680 module: temp, hum, ECO2, TVOC... (AirData)
   BME680,
 
-  /// @brief Data from Sensirion SCD (SCD30, SCD41...) sensor: CO2, temp, hum... (AirData)
-  SCD,
+  /// @brief Data from Sensirion SCD30 sensor: CO2, temp, hum... (AirData)
+  SCD30,
+  /// @brief Data from Sensirion SCD41 sensor: CO2, temp, hum... (AirData)
+  SCD41,
   /// @brief Number of sensor types
   SensorTypeCount
 };
@@ -56,7 +58,7 @@ enum EventType
 
 enum EnumNotification
 {
-  WaterDetected,
+  WaterDetected = 1,
   MovementDetected,
   CO2_800,
   AQI4,

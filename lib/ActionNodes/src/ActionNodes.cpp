@@ -23,7 +23,7 @@ void ActionNodes::init()
 
 void ActionNodes::loop()
 {
-  Serial.print(azureMqttClient->connected());
+  // Serial.print(azureMqttClient->connected());
   if (!azureMqttClient->connected())
   {
     static ulong lastReconnectAttempt = 0;

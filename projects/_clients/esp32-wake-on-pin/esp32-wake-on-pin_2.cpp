@@ -37,7 +37,8 @@ void ledOn(bool on) { digitalWrite(pinLed, !on); }
 #include "Enums.h"
 #include "MacAddresses.h"
 #if defined(BANOVO_BRDO)
-uint8_t *mac = macSoftEsp32DevIpex;
+// uint8_t *mac = macSoftEsp32DevIpex;
+uint8_t *mac = macEsp32BanovoBrdoHub;
 #elif defined(VRANIC)
 uint8_t *mac = macEsp32BattConnVranic;
 // uint8_t *mac = macSoftEsp32BattConnVranic;

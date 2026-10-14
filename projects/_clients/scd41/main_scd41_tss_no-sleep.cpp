@@ -10,7 +10,7 @@ AirData airData;
 #define SECOND (1000UL)
 #define MINUTE (60 * SECOND)
 
-// #define ITV_FRC (10 * 60)      // Forced Recalibration wait time (before and after FRC command)
+#define ITV_FRC (10 * 60)      // Forced Recalibration wait time (before and after FRC command)
 #define ITV_TIME_SLOT_MIN (5)  // Time slot in minutes (send data every ITV_TIME_SLOT_MIN minutes at slotSec seconds after the minute mark)
 #define ITV_TIME_SLOT_SEC (5)  // Seconds after the minute mark to send data (e.g. 5 means send at 11:00:05, 11:10:05...)
 #define ITV_WAIT (4.5 * 60)    // Waiting phase interval in seconds
@@ -64,7 +64,7 @@ ClientLogger logger;
 #include "Retryer.h"
 Retryer rtrData(4, 2000, 2000); // 2 retries, 2s between, 2s response timeout
 #include "OneButton.h"          // lib_deps = mathertel/OneButton@^2.0.0
-OneButton btn(D6, true);        // click: send data, 2click: print log, long click: clear log
+OneButton btn(7, true);         // click: send data, 2click: print log, long click: clear log
 bool sendDataNow = false;
 
 // D ulong msSend = 0; // Last send time
@@ -89,7 +89,7 @@ void goToWaitPhase(bool b)
   if (tss.getSlotMin() < 10)
     return; // if slotMin is less than 10 minutes, we stay in measure phase and ignore wait phase
   isInWaitPhase = b;
-  airSensor.setMeasurementInterval(b ? ITV_MEASURE_WAIT : ITV_MEASURE);
+  scd.setMeasurementInterval(b ? ITV_MEASURE_WAIT : ITV_MEASURE);
   Serial.println((b ? "Entering wait phase" : "Entering measure phase") + String(" @ ") + tss.getCurrentTime(millis()));
 }
 
@@ -126,7 +126,7 @@ void frc()
 {
   auto msStartFrc = millis(); // Start time for forced calibration
   // Serial.println("Button held on startup, starting forced recalibration with 425 ppm reference.");
-  airSensor.setMeasurementInterval(10);
+  scd.setMeasurementInterval(10);
   auto isLedOn = false;
   // LED is blinking before sending FRC command (10 minutes)
   while (millis() < msStartFrc + ITV_FRC * SECOND)
@@ -135,7 +135,7 @@ void frc()
     ledOn(isLedOn = !isLedOn);
   }
   msStartFrc = millis();                       // Reset start time for FRC
-  airSensor.setForcedRecalibrationFactor(425); // Set forced recalibration factor to 425 ppm
+  scd.setForcedRecalibrationFactor(425); // Set forced recalibration factor to 425 ppm
   Serial.println("Forced recalibration with 425 ppm reference command sent to sensor.");
   // LED is ON after sending FRC command (10 minutes)
   ledOn(true);
@@ -152,7 +152,7 @@ void setup()
   ledOn(false);
 
   Wire.begin();
-  while (!airSensor.begin())
+  while (!scd.begin())
   {
     logger.add("Air sensor not detected on startup.");
     ledOnRestart();
@@ -217,7 +217,7 @@ void setup()
 
 void loop()
 {
-  if (airSensor.dataAvailable())
+  if (scd.dataAvailable())
   {
     airSensor.readMeasurement();
     airData.ECO2 = airSensor.getCO2();

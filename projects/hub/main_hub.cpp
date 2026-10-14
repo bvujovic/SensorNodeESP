@@ -438,7 +438,7 @@ void loop()
   // }
   // else
   //   azureMqttClient.loop();
-  
+
   actionNodes.loop();
 
   delay(10);

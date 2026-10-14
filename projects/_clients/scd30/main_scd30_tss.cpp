@@ -54,7 +54,7 @@ void ledOnRestart()
 #include "MacAddresses.h"
 #include <espnow.h>
 #include <ESP8266WiFi.h>
-uint8_t *mac = macSoftEsp32DevIpex;
+uint8_t *mac = macSoftEsp32BanovoBrdoHub;
 uint8_t macFail[] = {0x78, 0x1C, 0x3C, 0xCA, 0xF3, 0x33}; // Non-existent MAC for testing
 
 #include "TimeSlotSend.h"

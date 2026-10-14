@@ -33,18 +33,18 @@ void setPeers()
   lenCmdTime = strlen(CMD_TIME);
   cntPeers = 0;
 #if defined(BANOVO_BRDO)
-  setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::SCD, Device::WemosExtAnt);
+  // setPeer(peers + (cntPeers++), macEsp8266WemosExtAnt, SensorType::SCD, Device::WemosExtAnt);
   setPeer(peers + (cntPeers++), macEsp8266Wemos1, SensorType::EnsDht, Device::Wemos1);
-  setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32
+  // setPeer(peers + (cntPeers++), macEsp32Dev, SensorType::UndefinedSensorType, Device::ESP32DevKit);          // test ESP32
   setPeer(peers + (cntPeers++), macEsp8266NodeMCU, SensorType::UndefinedSensorType, Device::ESP8266NodeMCU); // test ESP8266
   setPeer(peers + (cntPeers++), macEsp32BattConnUsbC1, SensorType::SimpleEvent, Device::ESP32BattConn);      // test SimpleEvent with ESP-NOW instead of STX882 or HC-12
-  setPeer(peers + (cntPeers++), macEsp8266Wemos2, SensorType::SCD, Device::Wemos1);
+  setPeer(peers + (cntPeers++), macEsp8266Wemos2, SensorType::SCD30, Device::Wemos1);
 #elif defined(VRANIC)
   // setPeer(peers + (cntPeers++), macEsp32C3SuperMiniBlue, SensorType::SimpleEvent, Device::ESP32C3SuperMiniBlue);
   setPeer(peers + (cntPeers++), macEsp32C3Xiao, SensorType::SimpleEvent, Device::ESP32C3Xiao);
   setPeer(peers + (cntPeers++), macEsp32C3ant1, SensorType::TempHumSensor, Device::ESP32C3ant1);
-  setPeer(peers + (cntPeers++), macEsp32C3ProMini1, SensorType::SCD, Device::ESP32C3ProMini1);
 #endif
+  setPeer(peers + (cntPeers++), macEsp32C3ProMini1, SensorType::SCD41, Device::ESP32C3ProMini1);
   addPeers();
 }
 
@@ -169,7 +169,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         buzzer.blinkCritical();
       logger.add(ToString::SensorTypes[p->type], ToString::Devices[p->device], line);
     }
-    else if (p->type == SensorType::SCD)
+    else if (p->type == SensorType::SCD30 || p->type == SensorType::SCD41)
     {
       AirData ad;
       memcpy(&ad, incomingData, len);

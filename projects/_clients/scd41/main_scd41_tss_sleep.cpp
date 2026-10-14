@@ -28,7 +28,7 @@ void ledOnDelay(int secs)
 #include <esp_now.h>
 #include <WiFi.h>
 #if defined(BANOVO_BRDO)
-uint8_t *mac = macSoftEsp32DevIpex;
+uint8_t *mac = macEsp32BanovoBrdoHub;
 #elif defined(VRANIC)
 uint8_t *mac = macEsp32BattConnVranic;
 #endif
@@ -36,7 +36,7 @@ uint8_t macFail[] = {0x78, 0x1C, 0x3C, 0xCA, 0xF3, 0x33}; // Non-existent MAC fo
 esp_now_peer_info_t peerInfo;
 
 #include "TimeSlotSend.h"
-TimeSlotSend tss(5, 5, 20, 6, 60);
+TimeSlotSend tss(5, 15, 20, 6, 60);
 #include "ClientLogger.h"
 ClientLogger logger;
 // #include "OneButton.h"   // lib_deps = mathertel/OneButton@^2.0.0
