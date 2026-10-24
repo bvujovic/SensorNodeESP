@@ -35,8 +35,7 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
       - [ ] Improve interface (chart.js disappears, shrinks)
   - [ ] Messages to the hub: ESP32CAM - take a picture, indoor vehicle - start, move...
     - [ ] (WIP) Make ESP32-C3 client that sleeps and gets a message from the hub
-    - [ ] Put Azure code in a class (e.g. AzureMessages/AzureThings)
-        - [ ] (bug) connection to Azure drops after 1.5-2 seconds (works well at @BanovoBrdo, but not at @Vranic)
+    - [x] Put Azure code in a class (ActionNodes)
     - [ ] ESP32-C3 turn up ESP32CAM and forward message from the hub
 - [ ] Clients:
   - [ ] ClientLogger
@@ -49,9 +48,9 @@ ESP32 device wakes on a pin event (e.g. wires are submerged, PIR signals HIGH...
       - [ ] Button click: print log on Serial and send data (prev data or wait for new?) to the hub
   - [ ] Add more sensor nodes
     - [ ] (WIP) SCD41 (CO2 sensor) (try to use this sensor in the same way as SCD30)
-        - [x] Print data on serial monitor every x minutes
-        - [x] Add button and FRC
-        - [ ] Add sending ESP-NOW message to the hub
+        - [x] Add sending ESP-NOW message to the hub
+        - [ ] (WIP) Test SCD41 sensor values - compare them to SCD30 data
+        - [ ] Clean up SCD41 client project folder: remove unused sketches
     - [ ] Microphone (noise levels)
 
 ## Add new client routine

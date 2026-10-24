@@ -3,9 +3,9 @@
 #include <Arduino.h>
 
 #include "OneButton.h"  // lib_deps = mathertel/OneButton@^2.0.0
-OneButton btn(10, true); // click: send data, 2click: print log, long click: clear log
+OneButton btn(7, true); // click: send data, 2click: print log, long click: clear log
 
-const byte pinLed = 8;
+const byte pinLed = 10;
 void ledOn(bool on) { digitalWrite(pinLed, !on); }
 
 void setup()

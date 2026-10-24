@@ -1,3 +1,5 @@
+//* SCD41 sensor node; sends air quality data (CO2, temperature, humidity) via ESP-NOW to the hub.
+//* TODO Make code more robust - put some checks and retries if: hub doesn't respond with time string...
 
 #include <Arduino.h>
 
@@ -10,43 +12,65 @@ const uint8_t pinSDA = 10;
 #include <SensirionI2cScd4x.h>
 SensirionI2cScd4x sensor;
 
-static char errorMessage[64];
-static int16_t error;
+static char errorMessage[64]; // buffer for error message from SCD41 functions
+static int16_t error;         // result (error code) of SCD41 functions, 0 = no error
 
 #define SECOND (1000UL)
 #define ITV_FRC_PRE (5 * 60) // Forced Recalibration wait time (before FRC command)
 // #define ITV_FRC_ERROR (2 * 60) // Forced Recalibration - LED blinking time if error occured
 
+enum Phase
+{
+    WaitPhase,    // Waiting
+    PreparePhase, // Get time[, measure] - rename to ReadyPhase?
+    PhaseCount
+};
+Phase phase;
+void nextPhase()
+{
+    // phase = (phase == WaitPhase) ? PreparePhase : WaitPhase;
+    phase = static_cast<Phase>((static_cast<int>(phase) + 1) % PhaseCount);
+    // Serial.println(String("Next phase: ") + (phase == WaitPhase ? "WaitPhase" : "PreparePhase"));
+}
+
 #include "AirData.h"
 AirData airData;
 
-// #include "MacAddresses.h"
-// #include <esp_now.h>
-// #include <WiFi.h>
-// uint8_t *mac = macSoftEsp32BanovoBrdoHub;
+#include "MacAddresses.h"
+#include <esp_now.h>
+#include <WiFi.h>
+uint8_t *mac = macSoftEsp32BanovoBrdoHub;
 // uint8_t macFail[] = {0x78, 0x1C, 0x3C, 0xCA, 0xF3, 0x33}; // Non-existent MAC for testing
-// esp_now_peer_info_t peerInfo;
+esp_now_peer_info_t peerInfo;
 
-// #include "TimeSlotSend.h"
-// TimeSlotSend tss(2, 15, 15, 0, 60);
+#include "TimeSlotSend.h"
+#define ITV_TIME_SLOT_MIN (5)  // Time slot in minutes (send data every ITV_TIME_SLOT_MIN minutes at slotSec seconds after the minute mark)
+#define ITV_TIME_SLOT_SEC (15) // Seconds after the minute mark to send data (e.g. 5 means send at 11:00:05, 11:10:05...)
+TimeSlotSend tss(ITV_TIME_SLOT_MIN, ITV_TIME_SLOT_SEC, 15, 0, 60);
 
-// void sendTimeRequest()
-// {
-//     Serial.println(String("sendTimeRequest @ ") + tss.getCurrentTime(millis()));
-//     // printTime(false);
-//     auto res = esp_now_send(mac, (uint8_t *)tss.getCmdTime(), strlen(tss.getCmdTime()));
-//     if (res != ESP_OK)
-//         Serial.println("ESP-NOW time request send error: " + String(res));
-//     tss.timeReqIsSent(millis());
-// }
+ulong msTimeReqSent = 0;
+void sendTimeRequest()
+{
+    // if (millis() < msTimeReqSent + 5 * SECOND && msTimeReqSent > 0)
+    //     return;
+    if (msTimeReqSent == 0 || millis() > msTimeReqSent + 5 * SECOND)
+    {
+        msTimeReqSent = millis();
+        Serial.println(String("sendTimeRequest @ ") + tss.getCurrentTime(millis()));
+        // tss.timeReqIsSent(millis());
+        auto res = esp_now_send(mac, (uint8_t *)tss.getCmdTime(), strlen(tss.getCmdTime()));
+        if (res != ESP_OK)
+            Serial.println("ESP-NOW time request send error: " + String(res));
+    }
+}
 
-// void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
-// {
-//     tss.onTimeStringRecv(incomingData, len, millis(), true);
-// }
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+    tss.onTimeStringRecv(incomingData, len, millis(), true);
+}
 
-constexpr uint32_t REPORT_INTERVAL_MS = 2UL * 60UL * 1000UL;
-uint32_t lastReport = 0;
+// constexpr uint32_t REPORT_INTERVAL_MS = 2UL * 60UL * 1000UL;
+// uint32_t lastReport = 0;
 
 // uint16_t co2 = 0;
 // float temperature = 0;
@@ -87,6 +111,7 @@ void ledOnRestart()
 
 // void frcError() { ledOnBlink(ITV_FRC_ERROR, SECOND / 2); }
 
+// If there is an error returned from some SCD41 function - print error message to Serial
 void handleSensorErrorIN()
 {
     if (error != NoError)
@@ -102,13 +127,12 @@ void setup()
     Serial.begin(115200);
     pinMode(pinLED, OUTPUT);
     ledOnDelay(2);
-    Serial.println(" *** SCD41 node sensor");
+    Serial.println(" *** SCD41 Sensor Node ***");
 
     Wire.begin(pinSDA, pinSCL);
     sensor.begin(Wire, SCD41_I2C_ADDR_62);
     delay(100);
 
-    // Ensure sensor is idle before selecting low-power mode.
     error = sensor.wakeUp();
     handleSensorErrorIN();
     error = sensor.stopPeriodicMeasurement();
@@ -140,7 +164,7 @@ void setup()
     error = sensor.startLowPowerPeriodicMeasurement();
     handleSensorErrorIN();
     Serial.println("SCD41 low-power mode started");
-    lastReport = millis();
+    // lastReport = millis();
 
     btn.attachDoubleClick(
         []()
@@ -200,78 +224,73 @@ void setup()
         });
 
     // tss.setItvTimeRespWait(5000); // 5 sec to wait for time response
-    // WiFi.mode(WIFI_STA);
-    // WiFi.setTxPower(WIFI_POWER_13dBm); // adjust power for wifi antenna, default is max power
-    // while (esp_now_init() != ESP_OK)
-    // {
-    //     Serial.println("ESP NOW INIT FAIL");
-    //     ledOnForever();
-    // }
-    // // auto res = esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
-    // auto res = esp_now_register_recv_cb(OnDataRecv);
-    // if (res != ESP_OK)
-    // {
-    //     Serial.printf("Register receiver code: %X\n", res);
-    //     // esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
-    //     // esp_now_register_send_cb(OnDataSent);
-    //     ledOnForever();
-    // }
+    WiFi.mode(WIFI_STA);
+    WiFi.setTxPower(WIFI_POWER_13dBm); // adjust power for wifi antenna, default is max power
+    while (esp_now_init() != ESP_OK)
+    {
+        Serial.println("ESP NOW INIT FAIL");
+        ledOnForever();
+    }
+    // auto res = esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+    auto res = esp_now_register_recv_cb(OnDataRecv);
+    if (res != ESP_OK)
+    {
+        Serial.printf("Register receiver code: %X\n", res);
+        // esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+        // esp_now_register_send_cb(OnDataSent);
+        ledOnForever();
+    }
 
-    // memcpy(peerInfo.peer_addr, mac, 6);
-    // peerInfo.channel = 0; // use current channel
-    // peerInfo.encrypt = false;
-    // res = esp_now_add_peer(&peerInfo);
-    // if (res != ESP_OK)
-    // {
-    //     printf("esp_now_add_peer res: 0x%X\n", res);
-    //     ledOnForever();
-    // }
-    // else
-    //     sendTimeRequest();
-
-    // Serial.println("Setup complete, waiting for time response...");
+    memcpy(peerInfo.peer_addr, mac, 6);
+    peerInfo.channel = 0; // use current channel
+    peerInfo.encrypt = false;
+    res = esp_now_add_peer(&peerInfo);
+    if (res != ESP_OK)
+    {
+        printf("esp_now_add_peer res: 0x%X\n", res);
+        ledOnForever();
+    }
+    sendTimeRequest();
+    phase = PreparePhase;
+    Serial.println("Setup complete");
 }
+
+// ulong msLastTssCheck = 0;
+ulong msNextTimeReq = 0;
 
 void loop()
 {
+    delay(20);
     btn.tick();
-    if (millis() - lastReport < REPORT_INTERVAL_MS)
+    auto ms = millis();
+    // if (ms > msLastTssCheck + 1000) //* testing
+    // {
+    //     msLastTssCheck = ms;
+    //     printf("%.1f\t%.1f\n", ms / 1000.0, tss.getMsTimeToSendData() / 1000.0);
+    // }
+    if (phase == WaitPhase)
     {
-        delay(20);
-        return;
+        if (ms > msNextTimeReq)
+            nextPhase();
+        else
+            return;
     }
-    // bool ready = false;
-    // error = sensor.getDataReadyStatus(ready);
-    // if (error != NoError)
-    // {
-    //     Serial.println("Failed to check data-ready status");
-    //     lastReport = millis();
-    //     return;
-    // }
-    // if (!ready)
-    // {
-    //     delay(500); // Try again shortly; don't restart the sensor.
-    //     return;
-    // }
-    // error = sensor.readMeasurement(co2, temperature, humidity);
-    // if (error == NoError)
-    // {
-    //     Serial.printf("CO2: %u ppm, ", co2);
-    //     Serial.printf("Temperature: %.2f C, ", temperature);
-    //     Serial.printf("Humidity: %.2f %%RH\n", humidity);
-    // }
-    // else
-    // {
-    //     Serial.println("Failed to read measurement");
-    // }
+
+    // if (tss.getMsTimeReqSent() == 0)
+    if (msTimeReqSent == 0)
+        sendTimeRequest();
+
+    if (!tss.isTimeToSendData(ms) || ms < msNextTimeReq + 5 * SECOND)
+        return;
+
     bool isDataReady = false;
-    ulong startTime = millis();
+    ulong startTime = ms;
     const ulong TIMEOUT_MS = 6000;
     // Poll until data is ready or timeout expires
     while (!isDataReady && (millis() < startTime + TIMEOUT_MS))
     {
-        delay(200); // yield to avoid hammering the I2C bus
-        sensor.getDataReadyStatus(isDataReady);
+        delay(200);                             // yield to avoid hammering the I2C bus
+        sensor.getDataReadyStatus(isDataReady); //? Check !error here? If error, break and report?
     }
     if (isDataReady)
     {
@@ -279,7 +298,22 @@ void loop()
         float temp = 0.0f, humidity = 0.0f;
         error = sensor.readMeasurement(co2, temp, humidity);
         if (!error)
+        {
             Serial.printf("CO2: %d ppm | T: %.2f °C | RH: %.2f %%\n", co2, temp, humidity);
+            airData.ECO2 = co2;
+            airData.temperature = temp;
+            airData.humidity = humidity + 0.5f; // Round humidity
+            printf("Sending data via ESP-NOW, millis: %lu\t%s\n", millis(), tss.getCurrentTime(millis()));
+            auto res = esp_now_send(mac, (uint8_t *)&airData, sizeof(airData));
+            if (res != 0)
+                Serial.println("ESP-NOW send error: " + String(res));
+            if (ITV_TIME_SLOT_MIN - 1 > 0)
+                msNextTimeReq = millis() + (ITV_TIME_SLOT_MIN - 1) * 60 * SECOND;
+            else
+                ledOnForever();
+            // tss.resetMsTimeReqSent();
+            msTimeReqSent = 0;
+            nextPhase();
+        }
     }
-    lastReport = millis();
 }

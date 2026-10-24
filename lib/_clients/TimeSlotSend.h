@@ -45,8 +45,10 @@ public:
     uint16_t getItvSensorRead() const { return itvSensorRead; }
     uint16_t getSecWakeUpTimeWrong() const { return secWakeUpTimeWrong; }
     uint16_t getItvWrongTimeDiff() const { return itvWrongTimeDiff; }
+    ulong getMsTimeToSendData() const { return msTimeToSendData; }
     /// @brief Gets the time when "time" request is sent. Returns 0 if time request is not sent yet.
     ulong getMsTimeReqSent() const { return msTimeReqSent; }
+    void resetMsTimeReqSent() { msTimeReqSent = 0; }
     /// @brief Gets the time when onTimeStringRecv is called. If time is not received yet, returns empty string.
     char *getStrTime() { return strTime; }
     /// @brief  Gets the current time string 

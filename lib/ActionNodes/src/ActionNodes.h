@@ -1,5 +1,7 @@
 #pragma once
 
+//* (bug) Connection to Azure drops after 1.5-2 seconds (works well at BanovoBrdo, but not at Vranic)
+
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h> // lib_deps = knolleary/PubSubClient @ ^2.8
 #include <azure-secrets.h>

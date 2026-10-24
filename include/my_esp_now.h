@@ -44,7 +44,8 @@ void setPeers()
   setPeer(peers + (cntPeers++), macEsp32C3Xiao, SensorType::SimpleEvent, Device::ESP32C3Xiao);
   setPeer(peers + (cntPeers++), macEsp32C3ant1, SensorType::TempHumSensor, Device::ESP32C3ant1);
 #endif
-  setPeer(peers + (cntPeers++), macEsp32C3ProMini1, SensorType::SCD41, Device::ESP32C3ProMini1);
+  setPeer(peers + (cntPeers++), macEsp32C3Zero, SensorType::SCD41, Device::ESP32C3Zero);
+  //* update of this list (setPeer calls) may require update of: mac addresses, enum Device and ToString class
   addPeers();
 }
 

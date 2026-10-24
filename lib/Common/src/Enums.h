@@ -45,6 +45,8 @@ enum Device
   ESP32C3ProMini1,
   ESP32C3ant1,
   ESP32C3Xiao,
+  ESP32C3Zero,
+  DeviceCount
 };
 
 /// @brief Depending on event type hub will handle data differently: log data, send WA notification, buzz...
